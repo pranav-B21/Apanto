@@ -48,10 +48,10 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your AI Smart Prompt Stream assistant. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
+      content: 'Hello! I\'m your AI Insert Name assistant. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
       isUser: false,
       timestamp: new Date(),
-      model: 'Smart Prompt Stream System',
+      model: 'Insert Name System',
       taskType: 'greeting',
       confidence: 100,
       tokens: 25,
@@ -201,9 +201,9 @@ const Chat = () => {
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex">
+    <div className="min-h-screen bg-slate-900 flex text-white">
       {/* Left Sidebar */}
-      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white/80 backdrop-blur-md border-r border-white/20 overflow-hidden`}>
+      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-slate-800 border-r border-slate-700 overflow-hidden`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
@@ -211,27 +211,27 @@ const Chat = () => {
                 Insert Name
               </h1>
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
+            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-white">
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <Button className="w-full mb-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-            <MessageSquare className="h-4 w-4 mr-2" />
+          <Button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="h-4 w-4 mr-2" />
             New Chat
           </Button>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Conversations</h3>
+            <h3 className="text-sm font-medium text-gray-300 mb-3">Recent Conversations</h3>
             {conversations.map((conv) => (
               <div
                 key={conv.id}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  conv.active ? 'bg-purple-100 border border-purple-200' : 'hover:bg-gray-100'
+                  conv.active ? 'bg-slate-700 border border-slate-600' : 'hover:bg-slate-700'
                 }`}
               >
-                <div className="font-medium text-sm text-gray-900 truncate">{conv.title}</div>
-                <div className="text-xs text-gray-500 flex items-center mt-1">
+                <div className="font-medium text-sm text-white truncate">{conv.title}</div>
+                <div className="text-xs text-gray-400 flex items-center mt-1">
                   <Clock className="h-3 w-3 mr-1" />
                   {conv.timestamp}
                 </div>
@@ -241,7 +241,7 @@ const Chat = () => {
         </div>
 
         <div className="absolute bottom-4 left-4 right-4">
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full bg-transparent border-slate-600 text-gray-300 hover:bg-slate-700">
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </Button>
@@ -251,11 +251,11 @@ const Chat = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-white/20 p-4">
+        <div className="bg-slate-800 border-b border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {!sidebarOpen && (
-                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
+                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white">
                   <Menu className="h-4 w-4" />
                 </Button>
               )}
@@ -353,26 +353,33 @@ const Chat = () => {
                 <div className={`flex space-x-3 max-w-3xl ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   <Avatar className="h-8 w-8">
                     {message.isUser ? (
-                      <AvatarFallback className="bg-purple-500 text-white">U</AvatarFallback>
+                      <AvatarFallback className="bg-blue-600 text-white">U</AvatarFallback>
                     ) : (
-                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">AI</AvatarFallback>
+                      <AvatarFallback className="bg-purple-600 text-white">
+                        <Zap className="h-4 w-4" />
+                      </AvatarFallback>
                     )}
                   </Avatar>
                   <div className={`rounded-2xl p-4 ${
                     message.isUser 
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
-                      : 'bg-white/80 backdrop-blur-sm border border-white/20'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-800 border border-slate-700 text-white'
                   }`}>
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     {!message.isUser && (
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
-                          <span>{message.model}</span>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700">
+                        <div className="flex items-center space-x-4 text-xs text-gray-400">
+                          <span className="flex items-center space-x-1">
+                            <Zap className="h-3 w-3" />
+                            <span>{message.model}</span>
+                          </span>
                           <span>•</span>
-                          <span>{message.responseTime?.toFixed(1)}s</span>
+                          <span>{message.taskType}</span>
+                          <span>•</span>
+                          <span>{message.confidence}% confidence</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(message.content)}>
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(message.content)} className="text-gray-400 hover:text-white">
                             <Copy className="h-3 w-3" />
                           </Button>
                         </div>
@@ -386,16 +393,18 @@ const Chat = () => {
               <div className="flex justify-start animate-fade-in">
                 <div className="flex space-x-3 max-w-3xl">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">AI</AvatarFallback>
+                    <AvatarFallback className="bg-purple-600 text-white">
+                      <Zap className="h-4 w-4" />
+                    </AvatarFallback>
                   </Avatar>
-                  <div className="rounded-2xl p-4 bg-white/80 backdrop-blur-sm border border-white/20">
+                  <div className="rounded-2xl p-4 bg-slate-800 border border-slate-700">
                     <div className="flex items-center space-x-2">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       </div>
-                      <span className="text-sm text-gray-600">Analyzing and routing...</span>
+                      <span className="text-sm text-gray-400">Analyzing and routing...</span>
                     </div>
                   </div>
                 </div>
@@ -408,10 +417,10 @@ const Chat = () => {
         {/* Prompt Enhancements */}
         {showEnhancements && (
           <div className="mx-4 mb-2">
-            <Card className="bg-white/90 backdrop-blur-sm border-purple-200">
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center">
-                  <Zap className="h-4 w-4 mr-2 text-purple-500" />
+                <CardTitle className="text-sm flex items-center text-white">
+                  <Zap className="h-4 w-4 mr-2 text-blue-400" />
                   Prompt Enhancement Suggestions
                 </CardTitle>
               </CardHeader>
@@ -420,11 +429,11 @@ const Chat = () => {
                   {enhancements.map((enhancement) => (
                     <div
                       key={enhancement.id}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-700 cursor-pointer transition-colors"
                       onClick={() => applyEnhancement(enhancement)}
                     >
-                      <span className="text-sm">{enhancement.suggestion}</span>
-                      <Badge variant="secondary" className="text-xs">
+                      <span className="text-sm text-gray-300">{enhancement.suggestion}</span>
+                      <Badge variant="secondary" className="text-xs bg-slate-700 text-gray-300">
                         {enhancement.confidence}%
                       </Badge>
                     </div>
@@ -436,7 +445,7 @@ const Chat = () => {
         )}
 
         {/* Input Area */}
-        <div className="p-4 bg-white/80 backdrop-blur-md border-t border-white/20">
+        <div className="p-4 bg-slate-800 border-t border-slate-700">
           <div className="max-w-4xl mx-auto">
             <div className="relative">
               <Textarea
@@ -444,7 +453,7 @@ const Chat = () => {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 placeholder="Ask me anything... I'll route it to the perfect AI model"
-                className="pr-12 min-h-[60px] resize-none bg-white/90 backdrop-blur-sm border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                className="pr-12 min-h-[60px] resize-none bg-slate-900 border-slate-600 focus:border-blue-500 focus:ring-blue-500 text-white placeholder-gray-400"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -455,12 +464,12 @@ const Chat = () => {
               <Button
                 onClick={handleSendMessage}
                 disabled={!currentMessage.trim() || isLoading}
-                className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+            <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
               <span>{currentMessage.length} characters</span>
               <span>Press Enter to send, Shift+Enter for new line</span>
             </div>
