@@ -21,7 +21,11 @@ import {
   ChevronDown,
   Copy,
   RotateCcw,
-  BarChart3
+  BarChart3,
+  Plus,
+  CheckCircle,
+  Brain,
+  TrendingUp
 } from 'lucide-react';
 import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -58,10 +62,8 @@ const Chat = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [enhancements, setEnhancements] = useState<Enhancement[]>([]);
   const [showEnhancements, setShowEnhancements] = useState(false);
-  const [priority, setPriority] = useState<'accuracy' | 'speed' | 'cost'>('accuracy');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -119,7 +121,7 @@ const Chat = () => {
     try {
       const chatRequest: ChatRequest = {
         prompt: messageToSend,
-        priority: priority
+        priority: 'accuracy' // Default to accuracy since we removed selection
       };
 
       const response: ChatResponse = await apiService.chat(chatRequest);
@@ -189,6 +191,15 @@ const Chat = () => {
     });
   };
 
+  const formatTaskType = (taskType: string) => {
+    return taskType.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  // Get the last AI message for routing insights
+  const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex">
       {/* Left Sidebar */}
@@ -197,7 +208,7 @@ const Chat = () => {
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                AI Smart Prompt
+                Insert Name
               </h1>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
@@ -209,27 +220,6 @@ const Chat = () => {
             <MessageSquare className="h-4 w-4 mr-2" />
             New Chat
           </Button>
-
-          {/* Priority Selection */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Priority</h3>
-            <div className="space-y-2">
-              {(['accuracy', 'speed', 'cost'] as const).map((p) => (
-                <Button
-                  key={p}
-                  variant={priority === p ? 'default' : 'outline'}
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => setPriority(p)}
-                >
-                  {p === 'accuracy' && <Target className="h-4 w-4 mr-2" />}
-                  {p === 'speed' && <Zap className="h-4 w-4 mr-2" />}
-                  {p === 'cost' && <DollarSign className="h-4 w-4 mr-2" />}
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </Button>
-              ))}
-            </div>
-          </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Conversations</h3>
@@ -269,18 +259,88 @@ const Chat = () => {
                   <Menu className="h-4 w-4" />
                 </Button>
               )}
-              <div>
-                <h2 className="font-semibold text-gray-900">AI Model Router</h2>
-                <p className="text-sm text-gray-600">Intelligent routing to the perfect AI model</p>
-              </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Zap className="h-3 h-3 mr-1" />
+                {lastAiMessage?.model || 'Llama 3.1'}
+              </Badge>
+              <Button variant="outline" className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none hover:from-purple-700 hover:to-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Host Model
+              </Button>
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                 ● Online
               </Badge>
             </div>
           </div>
         </div>
+
+        {/* Intelligent Routing Insights Panel */}
+        {lastAiMessage && (
+          <div className="p-4 border-b border-white/20">
+            <Card className="bg-white/90 backdrop-blur-sm border-purple-200">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <CardTitle className="text-lg">Intelligent Routing Active</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Optimized
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-8">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Target className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Task Detected</p>
+                      <p className="font-medium text-gray-900">{formatTaskType(lastAiMessage.taskType || 'General Chat')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-2">Confidence</p>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${lastAiMessage.confidence}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{lastAiMessage.confidence}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Brain className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Selected Model</p>
+                      <p className="font-medium text-gray-900">{lastAiMessage.model}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    <span className="text-purple-600 font-medium">Reasoning:</span> Default routing for general conversation
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Messages */}
         <ScrollArea className="flex-1 p-4">
@@ -407,114 +467,6 @@ const Chat = () => {
           </div>
         </div>
       </div>
-
-      {/* Right Panel - Routing Insights */}
-      <div className={`${rightPanelOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white/80 backdrop-blur-md border-l border-white/20 overflow-hidden`}>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-gray-900">Routing Insights</h3>
-            <Button variant="ghost" size="sm" onClick={() => setRightPanelOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {messages.length > 1 && (
-            <div className="space-y-4">
-              {(() => {
-                const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
-                if (!lastAiMessage) return null;
-
-                return (
-                  <>
-                    <Card className="border-purple-200 bg-purple-50/50">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm flex items-center">
-                          <Target className="h-4 w-4 mr-2 text-purple-500" />
-                          Current Request
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Task Type:</span>
-                          <Badge variant="outline">{lastAiMessage.taskType}</Badge>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Selected Model:</span>
-                          <span className="font-medium">{lastAiMessage.model}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Confidence:</span>
-                          <span className="font-medium">{lastAiMessage.confidence}%</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Est. Time:</span>
-                          <span className="font-medium">{lastAiMessage.responseTime?.toFixed(1)}s</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-green-200 bg-green-50/50">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm flex items-center">
-                          <BarChart3 className="h-4 w-4 mr-2 text-green-500" />
-                          Performance
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Response Time:</span>
-                          <span className="font-medium text-green-600">{lastAiMessage.responseTime?.toFixed(1)}s</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Tokens Used:</span>
-                          <span className="font-medium">{lastAiMessage.tokens}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Cost:</span>
-                          <span className="font-medium">${lastAiMessage.cost?.toFixed(4)}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Alternative Models</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between text-gray-600">
-                            <span>Claude-3.5 Sonnet</span>
-                            <span>2.1s</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>GPT-4 Turbo</span>
-                            <span>1.8s</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>Gemini Pro</span>
-                            <span>2.5s</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Floating button to reopen right panel */}
-      {!rightPanelOpen && (
-        <Button
-          onClick={() => setRightPanelOpen(true)}
-          className="fixed right-4 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg"
-          size="sm"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </Button>
-      )}
     </div>
   );
 };

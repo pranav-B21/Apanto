@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run backend\" \"npm run dev\"",
-    "backend": "cd src/backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
-    "install:python": "pip install -r requirements.txt",
+    "backend": "cd src/backend && python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "install:python": "pip3 install -r requirements.txt",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

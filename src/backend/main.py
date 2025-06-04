@@ -19,7 +19,14 @@ app = FastAPI(title="AI Smart Prompt Stream Backend", version="1.0.0")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",  # Primary Vite dev port
+        "http://localhost:3000",  # Alternative React port
+        "http://127.0.0.1:5173",  # IPv4 localhost
+        "http://localhost:8081",  # Backup port 1
+        "http://localhost:8082",  # Backup port 2
+        "http://localhost:4173"   # Vite preview port
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

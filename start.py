@@ -32,7 +32,7 @@ def main():
     try:
         # Start the FastAPI server
         subprocess.run([
-            sys.executable, "-m", "uvicorn", 
+            "python3", "-m", "uvicorn", 
             "main:app", 
             "--reload", 
             "--host", "0.0.0.0", 
