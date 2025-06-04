@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,9 +20,8 @@ import {
   ChevronUp,
   ChevronDown,
   Copy,
-  ThumbsUp,
-  ThumbsDown,
-  RotateCcw
+  RotateCcw,
+  BarChart3
 } from 'lucide-react';
 
 interface Message {
@@ -50,10 +48,10 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m RouterAI. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
+      content: 'Hello! I\'m <insert name>. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
       isUser: false,
       timestamp: new Date(),
-      model: 'RouterAI System',
+      model: '<insert name> System',
       taskType: 'greeting',
       confidence: 100,
       tokens: 25,
@@ -129,11 +127,11 @@ const Chat = () => {
     setIsLoading(true);
     setShowEnhancements(false);
 
-    // Simulate AI response with routing decision
+    // Simple model response
     setTimeout(() => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I've analyzed your request and routed it to the most suitable model. Based on the content, this appears to be a ${getTaskType(currentMessage)} task, so I've selected ${getSelectedModel(currentMessage)} for optimal results.\n\nHere's my response: This is a simulated AI response that would come from the selected model. The actual implementation would connect to real AI APIs and provide genuine responses based on intelligent routing decisions.`,
+        content: `I've analyzed your request "${currentMessage}" and determined this is a ${getTaskType(currentMessage)} task. I've selected ${getSelectedModel(currentMessage)} as the optimal model for this request.\n\nHere's a helpful response based on your query. This is a demonstration of how the AI would respond after intelligent routing to the most suitable model for your specific task type.`,
         isUser: false,
         timestamp: new Date(),
         model: getSelectedModel(currentMessage),
@@ -195,7 +193,7 @@ const Chat = () => {
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                RouterAI
+                &lt;insert name&gt;
               </h1>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
@@ -291,12 +289,6 @@ const Chat = () => {
                         <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => copyToClipboard(message.content)}>
                             <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <ThumbsUp className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <ThumbsDown className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
