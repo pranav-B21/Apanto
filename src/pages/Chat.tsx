@@ -39,7 +39,7 @@ interface Message {
   taskType?: string;
   confidence?: number;
   tokens?: number;
-  cost?: number;
+  cost?: number; 
   responseTime?: number;
 }
 
