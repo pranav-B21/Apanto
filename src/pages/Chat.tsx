@@ -23,6 +23,8 @@ import {
   RotateCcw,
   BarChart3
 } from 'lucide-react';
+import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -37,21 +39,15 @@ interface Message {
   responseTime?: number;
 }
 
-interface Enhancement {
-  id: string;
-  suggestion: string;
-  type: string;
-  confidence: number;
-}
-
 const Chat = () => {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m <insert name>. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
+      content: 'Hello! I\'m your AI Smart Prompt Stream assistant. I automatically route your prompts to the best AI model and provide enhancement suggestions. What can I help you with today?',
       isUser: false,
       timestamp: new Date(),
-      model: '<insert name> System',
+      model: 'Smart Prompt Stream System',
       taskType: 'greeting',
       confidence: 100,
       tokens: 25,
@@ -65,6 +61,7 @@ const Chat = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [enhancements, setEnhancements] = useState<Enhancement[]>([]);
   const [showEnhancements, setShowEnhancements] = useState(false);
+  const [priority, setPriority] = useState<'accuracy' | 'speed' | 'cost'>('accuracy');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -74,34 +71,25 @@ const Chat = () => {
     { id: '3', title: 'Writing Assistant', timestamp: 'Yesterday', active: false },
   ];
 
-  // Simulate real-time prompt enhancements
+  // Get real-time prompt enhancements from backend
   useEffect(() => {
-    if (currentMessage.length > 10) {
-      const mockEnhancements: Enhancement[] = [
-        {
-          id: '1',
-          suggestion: 'Add output format specification',
-          type: 'format',
-          confidence: 85
-        },
-        {
-          id: '2', 
-          suggestion: 'Include example of desired result',
-          type: 'example',
-          confidence: 78
-        },
-        {
-          id: '3',
-          suggestion: 'Specify programming language',
-          type: 'context',
-          confidence: 92
+    const getEnhancements = async () => {
+      if (currentMessage.length > 10) {
+        try {
+          const suggestions = await apiService.getEnhancementSuggestions(currentMessage);
+          setEnhancements(suggestions);
+          setShowEnhancements(true);
+        } catch (error) {
+          console.error('Failed to get enhancement suggestions:', error);
+          setShowEnhancements(false);
         }
-      ];
-      setEnhancements(mockEnhancements);
-      setShowEnhancements(true);
-    } else {
-      setShowEnhancements(false);
-    }
+      } else {
+        setShowEnhancements(false);
+      }
+    };
+
+    const timeoutId = setTimeout(getEnhancements, 500); // Debounce API calls
+    return () => clearTimeout(timeoutId);
   }, [currentMessage]);
 
   const scrollToBottom = () => {
@@ -123,53 +111,65 @@ const Chat = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = currentMessage;
     setCurrentMessage('');
     setIsLoading(true);
     setShowEnhancements(false);
 
-    // Simple model response
-    setTimeout(() => {
+    try {
+      const chatRequest: ChatRequest = {
+        prompt: messageToSend,
+        priority: priority
+      };
+
+      const response: ChatResponse = await apiService.chat(chatRequest);
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I've analyzed your request "${currentMessage}" and determined this is a ${getTaskType(currentMessage)} task. I've selected ${getSelectedModel(currentMessage)} as the optimal model for this request.\n\nHere's a helpful response based on your query. This is a demonstration of how the AI would respond after intelligent routing to the most suitable model for your specific task type.`,
+        content: response.response,
         isUser: false,
         timestamp: new Date(),
-        model: getSelectedModel(currentMessage),
-        taskType: getTaskType(currentMessage),
-        confidence: Math.floor(Math.random() * 20) + 80,
-        tokens: Math.floor(Math.random() * 200) + 50,
-        cost: Math.random() * 0.05,
-        responseTime: Math.random() * 2 + 0.5
+        model: response.model_used,
+        taskType: response.task_type,
+        confidence: Math.round(response.confidence),
+        tokens: response.tokens_used,
+        cost: response.estimated_cost,
+        responseTime: response.response_time
       };
 
       setMessages(prev => [...prev, aiMessage]);
+      
+      toast({
+        title: "Response Generated",
+        description: `Used ${response.model_used} for ${response.task_type} task`,
+      });
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure the backend is running and try again.`,
+        isUser: false,
+        timestamp: new Date(),
+        model: 'Error Handler',
+        taskType: 'error',
+        confidence: 0,
+        tokens: 0,
+        cost: 0,
+        responseTime: 0
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+      
+      toast({
+        title: "Error",
+        description: "Failed to get response from AI. Check if backend is running.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 2000);
-  };
-
-  const getTaskType = (message: string): string => {
-    if (message.toLowerCase().includes('code') || message.toLowerCase().includes('programming')) {
-      return 'coding';
-    } else if (message.toLowerCase().includes('write') || message.toLowerCase().includes('essay')) {
-      return 'writing';
-    } else if (message.toLowerCase().includes('math') || message.toLowerCase().includes('calculate')) {
-      return 'math';
-    } else if (message.toLowerCase().includes('creative') || message.toLowerCase().includes('story')) {
-      return 'creative';
     }
-    return 'general';
-  };
-
-  const getSelectedModel = (message: string): string => {
-    const taskType = getTaskType(message);
-    const models = {
-      coding: 'GPT-4 Turbo',
-      writing: 'Claude-3.5 Sonnet',
-      math: 'GPT-4',
-      creative: 'Claude-3 Opus',
-      general: 'GPT-4'
-    };
-    return models[taskType as keyof typeof models] || 'GPT-4';
   };
 
   const applyEnhancement = (enhancement: Enhancement) => {
@@ -183,6 +183,10 @@ const Chat = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Message copied to clipboard",
+    });
   };
 
   return (
@@ -193,7 +197,7 @@ const Chat = () => {
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                &lt;insert name&gt;
+                AI Smart Prompt
               </h1>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
@@ -205,6 +209,27 @@ const Chat = () => {
             <MessageSquare className="h-4 w-4 mr-2" />
             New Chat
           </Button>
+
+          {/* Priority Selection */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Priority</h3>
+            <div className="space-y-2">
+              {(['accuracy', 'speed', 'cost'] as const).map((p) => (
+                <Button
+                  key={p}
+                  variant={priority === p ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setPriority(p)}
+                >
+                  {p === 'accuracy' && <Target className="h-4 w-4 mr-2" />}
+                  {p === 'speed' && <Zap className="h-4 w-4 mr-2" />}
+                  {p === 'cost' && <DollarSign className="h-4 w-4 mr-2" />}
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Conversations</h3>
