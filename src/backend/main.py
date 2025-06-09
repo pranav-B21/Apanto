@@ -21,8 +21,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Primary Vite dev port
+        "http://localhost:5174",  # Vite backup port
         "http://localhost:3000",  # Alternative React port
         "http://127.0.0.1:5173",  # IPv4 localhost
+        "http://127.0.0.1:5174",  # IPv4 localhost backup
         "http://localhost:8081",  # Backup port 1
         "http://localhost:8082",  # Backup port 2
         "http://localhost:4173"   # Vite preview port
