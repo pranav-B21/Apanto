@@ -117,7 +117,7 @@ const Index = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  &lt;insert name&gt;
+                  Apanto
                 </h1>
               </div>
             </div>
@@ -155,7 +155,7 @@ const Index = () => {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Let &lt;insert name&gt; choose the perfect AI model for your task - automatically. 
+              Let Apanto choose the perfect AI model for your task - automatically. 
               Intelligent routing, real-time optimization, all in one interface.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -197,7 +197,7 @@ const Index = () => {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <Card className="p-6 border-red-200 bg-red-50/50">
               <CardHeader>
-                <CardTitle className="text-red-800 text-xl">Before &lt;insert name&gt;</CardTitle>
+                <CardTitle className="text-red-800 text-xl">Before Apanto</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -221,7 +221,7 @@ const Index = () => {
 
             <Card className="p-6 border-green-200 bg-green-50/50">
               <CardHeader>
-                <CardTitle className="text-green-800 text-xl">After &lt;insert name&gt;</CardTitle>
+                <CardTitle className="text-green-800 text-xl">After Apanto</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -251,7 +251,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Why Choose &lt;insert name&gt;?
+              Why Choose Apanto?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Experience the future of AI interaction with intelligent routing and optimization.
@@ -283,7 +283,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              How &lt;insert name&gt; Works
+              How Apanto Works
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Three simple steps to get the perfect AI response every time.
@@ -300,7 +300,7 @@ const Index = () => {
               {
                 step: "2", 
                 title: "AI Routes Intelligently",
-                description: "&lt;insert name&gt; selects the best model for your specific task and enhances your prompt for optimal results."
+                description: "Apanto selects the best model for your specific task and enhances your prompt for optimal results."
               },
               {
                 step: "3",
@@ -419,7 +419,7 @@ const Index = () => {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
-                &lt;insert name&gt;
+                Apanto
               </h3>
               <p className="text-gray-400">
                 Intelligent AI model routing for the modern web.
@@ -454,7 +454,7 @@ const Index = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 &lt;insert name&gt;. All rights reserved.</p>
+            <p>&copy; 2024 Apanto. All rights reserved.</p>
           </div>
         </div>
       </footer>

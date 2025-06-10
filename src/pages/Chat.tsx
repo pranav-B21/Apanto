@@ -228,8 +228,8 @@ const Chat = () => {
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Insert Name
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Apanto
               </h1>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
