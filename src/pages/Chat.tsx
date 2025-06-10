@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
 import { 
   Send, 
@@ -25,7 +27,8 @@ import {
   Plus,
   CheckCircle,
   Brain,
-  TrendingUp
+  TrendingUp,
+  Upload
 } from 'lucide-react';
 import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -64,6 +67,9 @@ const Chat = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [enhancements, setEnhancements] = useState<Enhancement[]>([]);
   const [showEnhancements, setShowEnhancements] = useState(false);
+  const [showHostForm, setShowHostForm] = useState(false);
+  const [modelUrl, setModelUrl] = useState('');
+  const [customName, setCustomName] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -197,6 +203,21 @@ const Chat = () => {
     ).join(' ');
   };
 
+  const handleHostModel = () => {
+    if (modelUrl.trim()) {
+      console.log('Model URL:', modelUrl);
+      console.log('Custom Name:', customName);
+      // Handle the form submission here
+      setModelUrl('');
+      setCustomName('');
+      setShowHostForm(false);
+      toast({
+        title: "Model Added",
+        description: "Your model has been successfully added for hosting",
+      });
+    }
+  };
+
   // Get the last AI message for routing insights
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
 
@@ -265,7 +286,11 @@ const Chat = () => {
                 <Zap className="h-3 h-3 mr-1" />
                 {lastAiMessage?.model || 'LLaMA3-70B'}
               </Badge>
-              <Button variant="outline" className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none hover:from-purple-700 hover:to-blue-700">
+              <Button 
+                variant="outline" 
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none hover:from-purple-700 hover:to-blue-700 hover:text-white"
+                onClick={() => setShowHostForm(!showHostForm)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Host Model
               </Button>
@@ -336,6 +361,69 @@ const Chat = () => {
                   <p className="text-sm text-gray-600">
                     <span className="text-purple-600 font-medium">Reasoning:</span> Default routing for general conversation
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Host Model Form */}
+        {showHostForm && (
+          <div className="p-4 border-b border-white/20">
+            <Card className="bg-white/90 backdrop-blur-sm border-gray-200">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Host Your Model</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHostForm(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="model-url" className="text-gray-700 text-sm">
+                      Hugging Face Model URL
+                    </Label>
+                    <Input
+                      id="model-url"
+                      type="text"
+                      placeholder="https://huggingface.co/username/model-name"
+                      value={modelUrl}
+                      onChange={(e) => setModelUrl(e.target.value)}
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-name" className="text-gray-700 text-sm">
+                      Custom Model Name
+                    </Label>
+                    <Input
+                      id="custom-name"
+                      type="text"
+                      placeholder="My Custom Model"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleHostModel}
+                      disabled={!modelUrl.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Host Model
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
