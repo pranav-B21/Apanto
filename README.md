@@ -36,95 +36,77 @@ Apanto is an intelligent AI model routing application that automatically selects
 - Supabase database (or PostgreSQL)
 - GPU recommended for hosting larger Hugging Face models
 
-## Setup
+## Quick Setup
 
-### 1. Clone the repository
+### 1. Clone and Setup
 
 ```bash
 git clone <repository-url>
-cd ai-smart-prompt-stream
-```
-
-### 2. Install frontend dependencies
-
-```bash
+cd Apanto
 npm install
 ```
 
-### 3. Install Python dependencies
+### 2. Configure Environment
 
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Environment Configuration
-
-Copy `env.example` to `.env` and fill in your credentials:
-
-```bash
-cp env.example .env
-```
-
-Edit `.env` with your actual values:
+Create a `.env` file with your credentials:
 
 ```env
 # Groq API Configuration
 GROQ_API_KEY=your_actual_groq_api_key
 
 # Supabase Database Configuration  
-DB_HOST=your_supabase_host
+DB_HOST=aws-0-us-east-2.pooler.supabase.com
 DB_PORT=6543
 DB_NAME=postgres
-DB_USER=your_supabase_user
+DB_USER=postgres.jqvayaoaqjkytejrypxs
 DB_PASSWORD=your_supabase_password
 ```
 
-### 5. Database Setup
-
-Make sure your Supabase database has the required tables:
-
-```sql
--- Models table
-CREATE TABLE models (
-    model_id VARCHAR PRIMARY KEY,
-    name VARCHAR NOT NULL
-);
-
--- Model scores table
-CREATE TABLE model_scores (
-    model_id VARCHAR REFERENCES models(model_id),
-    category VARCHAR NOT NULL,
-    accuracy DECIMAL,
-    speed DECIMAL,
-    cost DECIMAL,
-    PRIMARY KEY (model_id, category)
-);
-```
-
-## Running the Application
-
-### Option 1: Run Everything Together (Recommended)
+### 3. Run Application
 
 ```bash
 npm run dev:full
 ```
 
-This command will start both the backend (port 8000) and frontend (port 5173) simultaneously.
+That's it! The application will automatically:
+- Clean up any conflicting processes
+- Install missing Python dependencies
+- Start backend and wait for it to be ready
+- Start frontend once backend is connected
 
-### Option 2: Run Separately
+## Running the Application
 
-**Terminal 1 - Backend:**
+### Option 1: Full Stack (Recommended)
+
 ```bash
-npm run backend
-# or
-python start.py
-# or manually:
-cd src/backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+npm run dev:full
 ```
 
-**Terminal 2 - Frontend:**
+This command automatically handles:
+- Port cleanup (kills any existing processes on 8000/5173)
+- Dependency checking and installation
+- Backend startup with health checks
+- Frontend startup once backend is ready
+- Graceful shutdown with Ctrl+C
+
+### Option 2: Individual Services
+
 ```bash
+# Backend only
+npm run backend
+
+# Frontend only (after backend is running)
 npm run dev
+```
+
+### Option 3: Alternative Commands
+
+```bash
+# Same as dev:full
+npm start
+
+# Install Python dependencies manually
+npm run install:python
 ```
 
 ## Hugging Face Model Hosting

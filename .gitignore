@@ -51,6 +51,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# Backend
+src/backend/start-backend.sh
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
