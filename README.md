@@ -36,9 +36,9 @@ Apanto is an intelligent AI model routing application that automatically selects
 - Supabase database (or PostgreSQL)
 - GPU recommended for hosting larger Hugging Face models
 
-## Quick Setup
+## Quick Setup (2 Steps)
 
-### 1. Clone and Setup
+### 1. Clone and Install
 
 ```bash
 git clone <repository-url>
@@ -69,45 +69,53 @@ npm run dev:full
 ```
 
 That's it! The application will automatically:
+- Install missing Node.js dependencies if needed
+- Install all required Python dependencies 
 - Clean up any conflicting processes
-- Install missing Python dependencies
 - Start backend and wait for it to be ready
 - Start frontend once backend is connected
 
 ## Running the Application
 
-### Option 1: Full Stack (Recommended)
+### Main Command (Recommended)
 
 ```bash
 npm run dev:full
 ```
 
 This command automatically handles:
-- Port cleanup (kills any existing processes on 8000/5173)
-- Dependency checking and installation
-- Backend startup with health checks
-- Frontend startup once backend is ready
-- Graceful shutdown with Ctrl+C
+- ✅ Node.js dependency installation (if node_modules missing)
+- ✅ Python dependency installation (all packages listed in package.json)
+- ✅ Port cleanup (kills any existing processes on 8000/5173)
+- ✅ Backend startup with health checks
+- ✅ Frontend startup once backend is ready
+- ✅ Graceful shutdown with Ctrl+C
 
-### Option 2: Individual Services
-
-```bash
-# Backend only
-npm run backend
-
-# Frontend only (after backend is running)
-npm run dev
-```
-
-### Option 3: Alternative Commands
+### Alternative Commands
 
 ```bash
 # Same as dev:full
 npm start
 
+# Individual services (manual)
+npm run backend     # Backend only
+npm run dev        # Frontend only
+
 # Install Python dependencies manually
 npm run install:python
 ```
+
+## Python Dependencies
+
+All Python dependencies are managed through `package.json` under the `python_dependencies` section. No separate `requirements.txt` file needed!
+
+The following packages are automatically installed when you run `npm run dev:full`:
+- FastAPI & Uvicorn (API server)
+- Pydantic (data validation)
+- Requests & python-dotenv (HTTP & environment)
+- psycopg2-binary (database connection)
+- transformers, torch, accelerate (ML models)
+- huggingface_hub, openai (AI APIs)
 
 ## Hugging Face Model Hosting
 

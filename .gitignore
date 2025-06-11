@@ -52,7 +52,6 @@ MANIFEST
 *.spec
 
 # Backend
-src/backend/start-backend.sh
 
 # Installer logs
 pip-log.txt
