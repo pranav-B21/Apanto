@@ -30,7 +30,7 @@ import {
   TrendingUp,
   Upload
 } from 'lucide-react';
-import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/lib/api';
+import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/frontend/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
