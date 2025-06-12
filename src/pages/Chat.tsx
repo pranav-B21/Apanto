@@ -203,20 +203,50 @@ const Chat = () => {
     ).join(' ');
   };
 
-  const handleHostModel = () => {
-    if (modelUrl.trim()) {
-      console.log('Model URL:', modelUrl);
-      console.log('Custom Name:', customName);
-      // Handle the form submission here
-      setModelUrl('');
-      setCustomName('');
-      setShowHostForm(false);
-      toast({
-        title: "Model Added",
-        description: "Your model has been successfully added for hosting",
-      });
+  const handleHostModel = async () => {
+    if (!modelUrl.trim()) return;
+    
+    try {
+        const response = await fetch('/api/host-model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model_url: modelUrl,
+                custom_name: customName || undefined
+            }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || 'Failed to host model');
+        }
+
+        // Reset form
+        setModelUrl('');
+        setCustomName('');
+        setShowHostForm(false);
+        
+        // Show success message
+        toast({
+            title: "Model Added",
+            description: data.message || "Your model has been successfully added for hosting",
+        });
+        
+        // Refresh models list if needed
+        // You might want to add a function to refresh the available models
+        
+    } catch (error) {
+        console.error('Failed to host model:', error);
+        toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to host model",
+            variant: "destructive",
+        });
     }
-  };
+};
 
   // Get the last AI message for routing insights
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
