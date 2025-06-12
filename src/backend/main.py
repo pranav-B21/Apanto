@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from infer import run_prompt_on_llm
 from scorer import load_models, select_best_model
 from analyzer import classify_prompt
-from database import load_models_from_database
+from database import load_models_from_database, db_manager
 
 # Load environment variables
 load_dotenv()
@@ -272,7 +272,6 @@ async def get_model_analytics():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
-
 
 if __name__ == "__main__":
     import uvicorn
