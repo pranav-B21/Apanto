@@ -30,7 +30,7 @@ import {
   TrendingUp,
   Upload
 } from 'lucide-react';
-import { apiService, type ChatRequest, type ChatResponse, type Enhancement } from '@/lib/api';
+import { apiService, type ChatRequest, type ChatResponse, type Enhancement, type ModelInfo } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -44,6 +44,7 @@ interface Message {
   tokens?: number;
   cost?: number; 
   responseTime?: number;
+  isLocal?: boolean;
 }
 
 const Chat = () => {
@@ -72,6 +73,8 @@ const Chat = () => {
   const [customName, setCustomName] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const conversations = [
     { id: '1', title: 'AI Model Routing', timestamp: '2 minutes ago', active: true },
@@ -100,6 +103,25 @@ const Chat = () => {
     return () => clearTimeout(timeoutId);
   }, [currentMessage]);
 
+  useEffect(() => {
+    // Load available models on component mount
+    loadAvailableModels();
+  }, []);
+
+  const loadAvailableModels = async () => {
+    try {
+      const { models } = await apiService.getAvailableModels();
+      setAvailableModels(models);
+    } catch (error) {
+      console.error('Failed to load models:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load available models",
+        variant: "destructive",
+      });
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -127,7 +149,8 @@ const Chat = () => {
     try {
       const chatRequest: ChatRequest = {
         prompt: messageToSend,
-        priority: 'accuracy' // Default to accuracy since we removed selection
+        priority: 'accuracy',
+        model_id: selectedModel || undefined
       };
 
       const response: ChatResponse = await apiService.chat(chatRequest);
@@ -142,37 +165,22 @@ const Chat = () => {
         confidence: Math.round(response.confidence),
         tokens: response.tokens_used,
         cost: response.estimated_cost,
-        responseTime: response.response_time
+        responseTime: response.response_time,
+        isLocal: response.is_local
       };
 
       setMessages(prev => [...prev, aiMessage]);
       
       toast({
         title: "Response Generated",
-        description: `Used ${response.model_used} for ${response.task_type} task`,
+        description: `Used ${response.model_used}${response.is_local ? ' (Local)' : ''} for ${response.task_type} task`,
       });
 
     } catch (error) {
-      console.error('Chat error:', error);
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure the backend is running and try again.`,
-        isUser: false,
-        timestamp: new Date(),
-        model: 'Error Handler',
-        taskType: 'error',
-        confidence: 0,
-        tokens: 0,
-        cost: 0,
-        responseTime: 0
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-      
+      console.error('Failed to send message:', error);
       toast({
         title: "Error",
-        description: "Failed to get response from AI. Check if backend is running.",
+        description: error instanceof Error ? error.message : "Failed to generate response",
         variant: "destructive",
       });
     } finally {
@@ -207,46 +215,35 @@ const Chat = () => {
     if (!modelUrl.trim()) return;
     
     try {
-        const response = await fetch('/api/host-model', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model_url: modelUrl,
-                custom_name: customName || undefined
-            }),
-        });
+      const response = await apiService.hostModel(modelUrl, customName);
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to host model');
+      }
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.detail || 'Failed to host model');
-        }
-
-        // Reset form
-        setModelUrl('');
-        setCustomName('');
-        setShowHostForm(false);
-        
-        // Show success message
-        toast({
-            title: "Model Added",
-            description: data.message || "Your model has been successfully added for hosting",
-        });
-        
-        // Refresh models list if needed
-        // You might want to add a function to refresh the available models
-        
+      // Reset form
+      setModelUrl('');
+      setCustomName('');
+      setShowHostForm(false);
+      
+      // Show success message
+      toast({
+        title: "Model Added",
+        description: response.message || "Your model has been successfully added for hosting",
+      });
+      
+      // Refresh models list
+      loadAvailableModels();
+      
     } catch (error) {
-        console.error('Failed to host model:', error);
-        toast({
-            title: "Error",
-            description: error instanceof Error ? error.message : "Failed to host model",
-            variant: "destructive",
-        });
+      console.error('Failed to host model:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to host model",
+        variant: "destructive",
+      });
     }
-};
+  };
 
   // Get the last AI message for routing insights
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
@@ -288,6 +285,23 @@ const Chat = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Model Selection */}
+          <div className="p-4 border-t border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">Select Model</h3>
+            <select
+              value={selectedModel || ''}
+              onChange={(e) => setSelectedModel(e.target.value || null)}
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="">Auto-select (Recommended)</option>
+              {availableModels.map((model) => (
+                <option key={model.model_id} value={model.model_id}>
+                  {model.name} {model.is_local ? '(Local)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -481,6 +495,20 @@ const Chat = () => {
                       ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
                       : 'bg-white/80 backdrop-blur-sm border border-white/20'
                   }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {!message.isUser && (
+                        <>
+                          <span className="text-sm font-medium">
+                            {message.model}
+                            {message.isLocal && (
+                              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                                Local
+                              </span>
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </div>
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     {!message.isUser && (
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">

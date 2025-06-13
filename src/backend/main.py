@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from transformers import AutoModel, AutoTokenizer, AutoConfig
+import torch
 
 # Import our existing modules
 from infer import run_prompt_on_llm
@@ -63,6 +65,10 @@ class EnhancementSuggestion(BaseModel):
     suggestion: str
     type: str
     confidence: int
+
+class HostModelRequest(BaseModel):
+    model_url: str
+    custom_name: Optional[str] = None
 
 # Global variables to cache models
 cached_models = None
@@ -272,6 +278,66 @@ async def get_model_analytics():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
+
+@app.post("/host-model")
+async def host_model(request: HostModelRequest):
+    """Host a new Hugging Face model"""
+    try:
+        model_id = request.model_url.strip()
+        
+        # Remove huggingface.co if present
+        model_id = model_id.replace("https://huggingface.co/", "")
+        model_id = model_id.replace("http://huggingface.co/", "")
+        
+        # Load model and tokenizer
+        try:
+            # First try to load config to check if model exists
+            config = AutoConfig.from_pretrained(model_id)
+            
+            # Load tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(model_id)
+            model = AutoModel.from_pretrained(model_id)
+            
+            # Test inference
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = model.to(device)
+            
+            # Simple test input
+            test_input = tokenizer("Test input", return_tensors="pt").to(device)
+            with torch.no_grad():
+                _ = model(**test_input)
+            
+            # If we get here, model loaded successfully
+            return {
+                "success": True,
+                "message": f"Successfully loaded model {model_id}",
+                "model_id": model_id,
+                "model_type": config.model_type,
+                "device": device
+            }
+            
+        except Exception as e:
+            print(f"Error loading model {model_id}:")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            import traceback
+            print("Full traceback:")
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to load model: {str(e)}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error in host-model endpoint:")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

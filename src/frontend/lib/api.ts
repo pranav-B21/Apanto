@@ -2,7 +2,8 @@ const API_BASE_URL = 'http://localhost:8000';
 
 export interface ChatRequest {
   prompt: string;
-  priority?: 'accuracy' | 'speed' | 'cost';
+  priority: 'accuracy' | 'speed' | 'cost';
+  model_id?: string;
 }
 
 export interface ChatResponse {
@@ -14,6 +15,7 @@ export interface ChatResponse {
   tokens_used: number;
   estimated_cost: number;
   top_3_models: string[];
+  is_local?: boolean;
 }
 
 export interface Enhancement {
@@ -27,6 +29,7 @@ export interface ModelInfo {
   name: string;
   model_id: string;
   scores: Record<string, Record<string, number>>;
+  is_local?: boolean;
 }
 
 class ApiService {
@@ -71,6 +74,13 @@ class ApiService {
       body: JSON.stringify({ prompt }),
     });
     return response.enhancements;
+  }
+
+  async hostModel(modelUrl: string, customName?: string): Promise<{ success: boolean; message: string; model_id?: string }> {
+    return this.request<{ success: boolean; message: string; model_id?: string }>('/host-model', {
+      method: 'POST',
+      body: JSON.stringify({ model_url: modelUrl, custom_name: customName }),
+    });
   }
 
   async getAvailableModels(): Promise<{ models: ModelInfo[]; count: number }> {
