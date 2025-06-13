@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import AutoModel, AutoTokenizer, AutoConfig, AutoModelForCausalLM
 import torch
 
 # Import our existing modules
@@ -291,28 +291,50 @@ async def host_model(request: HostModelRequest):
         
         # Load model and tokenizer
         try:
-            # First try to load config to check if model exists
-            config = AutoConfig.from_pretrained(model_id)
+            print(f"Starting to load model {model_id}...")
             
-            # Load tokenizer
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
-            model = AutoModel.from_pretrained(model_id)
+            # Load tokenizer with progress tracking
+            print("Loading tokenizer...")
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_id,
+                local_files_only=False,
+                resume_download=True
+            )
+            print("Tokenizer loaded successfully")
+            
+            # Load model with progress tracking
+            print("Loading model...")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                local_files_only=False,
+                resume_download=True,
+                low_cpu_mem_usage=True
+            )
+            print("Model loaded successfully")
             
             # Test inference
             device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"Moving model to {device}...")
             model = model.to(device)
             
             # Simple test input
-            test_input = tokenizer("Test input", return_tensors="pt").to(device)
+            print("Running test inference...")
+            test_input = tokenizer("Hello, how are you?", return_tensors="pt").to(device)
             with torch.no_grad():
-                _ = model(**test_input)
+                outputs = model.generate(
+                    **test_input,
+                    max_new_tokens=50,
+                    temperature=0.2,
+                    top_p=0.9,
+                    do_sample=True
+                )
+            print("Test inference successful")
             
             # If we get here, model loaded successfully
             return {
                 "success": True,
                 "message": f"Successfully loaded model {model_id}",
                 "model_id": model_id,
-                "model_type": config.model_type,
                 "device": device
             }
             
@@ -323,10 +345,23 @@ async def host_model(request: HostModelRequest):
             import traceback
             print("Full traceback:")
             traceback.print_exc()
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to load model: {str(e)}"
-            )
+            
+            # Check if it's a download error
+            if "Connection" in str(e) or "timeout" in str(e).lower():
+                raise HTTPException(
+                    status_code=504,
+                    detail="Model download timed out. Please try again."
+                )
+            elif "KeyboardInterrupt" in str(e):
+                raise HTTPException(
+                    status_code=499,
+                    detail="Model download was interrupted. Please try again."
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to load model: {str(e)}"
+                )
             
     except HTTPException:
         raise

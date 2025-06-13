@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-   "dev:full": "concurrently \"npm run backend\" \"npm run frontend:wait\"",
-    "prestart": "npm run ensure-deps && npm run cleanup && npm run check-python-deps",
+    "dev:full": "npm run cleanup && concurrently \"npm run backend\" \"npm run frontend:wait\"",
+    "prestart": "npm run ensure-deps && npm run check-python-deps",
     "ensure-deps": "[ ! -d 'node_modules' ] && npm install || true",
     "cleanup": "lsof -ti:8000 | xargs kill -9 2>/dev/null || true; lsof -ti:5173 | xargs kill -9 2>/dev/null || true",
     "check-python-deps": "python3 -c 'import fastapi, uvicorn, pydantic, requests, dotenv, psycopg2' 2>/dev/null || npm run install:python",
