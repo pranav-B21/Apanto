@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,15 +14,39 @@ import { useState, useEffect } from "react";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Check localStorage or system preference on initial load
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
   useEffect(() => {
+    // Save preference to localStorage
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    
+    // Apply dark mode class with smooth transition
+    document.documentElement.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+    
     if (darkMode) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    // Clean up transition after it completes
+    const timeoutId = setTimeout(() => {
+      document.documentElement.style.transition = '';
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -36,11 +61,22 @@ const App = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Toggle dark mode"
-                    onClick={() => setDarkMode(!darkMode)}
-                    className="ml-2 rounded-full text-xl"
+                    aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                    onClick={toggleDarkMode}
+                    className="ml-2 rounded-full hover:bg-accent hover:text-accent-foreground transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                   >
-                    {darkMode ? "☀️" : "🌙"}
+                    <div className="relative w-5 h-5">
+                      <Sun className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
+                        darkMode 
+                          ? 'rotate-90 scale-0 opacity-0' 
+                          : 'rotate-0 scale-100 opacity-100'
+                      }`} />
+                      <Moon className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
+                        darkMode 
+                          ? 'rotate-0 scale-100 opacity-100' 
+                          : '-rotate-90 scale-0 opacity-0'
+                      }`} />
+                    </div>
                   </Button>
                 }
               />
