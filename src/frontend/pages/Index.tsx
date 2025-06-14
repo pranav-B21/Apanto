@@ -123,25 +123,23 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
                 </h1>
               </div>
             </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                <Link to="/chat" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Chat
-                </Link>
-                <a href="#models" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Models
-                </a>
-                <a href="#pricing" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Pricing
-                </a>
-                {darkModeToggle}
-                <Button variant="outline" className="mr-2">
-                  Sign In
-                </Button>
-                <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                  Get Started
-                </Button>
-              </div>
+            <div className="flex items-center space-x-4">
+              <Link to="/chat" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Chat
+              </Link>
+              <a href="#models" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Models
+              </a>
+              <a href="#pricing" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Pricing
+              </a>
+              {darkModeToggle}
+              <Button variant="outline" className="mr-2">
+                Sign In
+              </Button>
+              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                Get Started
+              </Button>
             </div>
           </div>
         </div>
@@ -198,50 +196,50 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
           </div>
           
           <div className="grid md:grid-cols-2 gap-8 items-center">
-            <Card className="p-6 border-red-200 bg-red-50/50 dark:bg-red-900/10 dark:border-red-700">
+            <Card className="p-6 border-red-200 bg-red-50/50 dark:bg-red-900/40 dark:border-red-700">
               <CardHeader>
-                <CardTitle className="text-red-800 text-xl">Before Apanto</CardTitle>
+                <CardTitle className="text-red-800 dark:text-red-300 text-xl">Before Apanto</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                  <span className="text-red-700">Manual model selection for every task</span>
+                  <div className="w-2 h-2 bg-red-500 dark:bg-red-300 rounded-full mt-2"></div>
+                  <span className="text-red-700 dark:text-red-200">Manual model selection for every task</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                  <span className="text-red-700">Trial-and-error to find the right AI</span>
+                  <div className="w-2 h-2 bg-red-500 dark:bg-red-300 rounded-full mt-2"></div>
+                  <span className="text-red-700 dark:text-red-200">Trial-and-error to find the right AI</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                  <span className="text-red-700">Constant switching between platforms</span>
+                  <div className="w-2 h-2 bg-red-500 dark:bg-red-300 rounded-full mt-2"></div>
+                  <span className="text-red-700 dark:text-red-200">Constant switching between platforms</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                  <span className="text-red-700">Suboptimal prompts and results</span>
+                  <div className="w-2 h-2 bg-red-500 dark:bg-red-300 rounded-full mt-2"></div>
+                  <span className="text-red-700 dark:text-red-200">Suboptimal prompts and results</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="p-6 border-green-200 bg-green-50/50 dark:bg-green-900/10 dark:border-green-700">
+            <Card className="p-6 border-green-200 bg-green-50/50 dark:bg-green-900/40 dark:border-green-700">
               <CardHeader>
-                <CardTitle className="text-green-800 text-xl">After Apanto</CardTitle>
+                <CardTitle className="text-green-800 dark:text-green-300 text-xl">After Apanto</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <span className="text-green-700">Automatic model selection</span>
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-300 mt-0.5" />
+                  <span className="text-green-700 dark:text-green-200">Automatic model selection</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <span className="text-green-700">AI-powered prompt optimization</span>
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-300 mt-0.5" />
+                  <span className="text-green-700 dark:text-green-200">AI-powered prompt optimization</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <span className="text-green-700">One unified interface for all models</span>
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-300 mt-0.5" />
+                  <span className="text-green-700 dark:text-green-200">One unified interface for all models</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <span className="text-green-700">Consistently better results</span>
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-300 mt-0.5" />
+                  <span className="text-green-700 dark:text-green-200">Consistently better results</span>
                 </div>
               </CardContent>
             </Card>
@@ -263,7 +261,10 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-all duration-300 group border-0 bg-card/60 backdrop-blur-sm">
+              <Card
+                key={index}
+                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 group hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-purple-400 dark:hover:border-purple-600 cursor-pointer backdrop-blur-sm"
+              >
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <feature.icon className="h-6 w-6 text-foreground" />
@@ -292,33 +293,34 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
               Three simple steps to get the perfect AI response every time.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "1",
-                title: "Type Your Prompt",
-                description: "Write your question or request naturally. Our AI analyzes your intent and task type in real-time."
-              },
-              {
-                step: "2", 
-                title: "AI Routes Intelligently",
-                description: "Apanto selects the best model for your specific task and enhances your prompt for optimal results."
-              },
-              {
-                step: "3",
-                title: "Get Perfect Results",
-                description: "Receive optimized responses faster than ever, with full transparency into the routing decision."
-              }
-            ].map((item, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-foreground text-2xl font-bold mx-auto mb-4">
-                  {item.step}
-                </div>
-                <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
-              </div>
-            ))}
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-0 relative">
+            {/* Step 1 */}
+            <div className="flex flex-col items-center flex-1 min-w-[220px]">
+              <h3 className="text-xl font-semibold mb-3 text-foreground">Type Your Prompt</h3>
+              <p className="text-muted-foreground text-center max-w-xs">Write your question or request naturally. Our AI analyzes your intent and task type in real-time.</p>
+            </div>
+            {/* Arrow 1 */}
+            <div className="hidden md:flex flex-col items-center justify-center flex-none mx-4">
+              <svg className="w-16 h-16 text-purple-400 dark:text-purple-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 24h32m0 0l-8-8m8 8l-8 8" />
+              </svg>
+            </div>
+            {/* Step 2 */}
+            <div className="flex flex-col items-center flex-1 min-w-[220px]">
+              <h3 className="text-xl font-semibold mb-3 text-foreground">AI Routes Intelligently</h3>
+              <p className="text-muted-foreground text-center max-w-xs">Apanto selects the best model for your specific task and enhances your prompt for optimal results.</p>
+            </div>
+            {/* Arrow 2 */}
+            <div className="hidden md:flex flex-col items-center justify-center flex-none mx-4">
+              <svg className="w-16 h-16 text-purple-400 dark:text-purple-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 24h32m0 0l-8-8m8 8l-8 8" />
+              </svg>
+            </div>
+            {/* Step 3 */}
+            <div className="flex flex-col items-center flex-1 min-w-[220px]">
+              <h3 className="text-xl font-semibold mb-3 text-foreground">Get Perfect Results</h3>
+              <p className="text-muted-foreground text-center max-w-xs">Receive optimized responses faster than ever, with full transparency into the routing decision.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -337,7 +339,10 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {models.map((model, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-all duration-300 border-0 bg-card/60 backdrop-blur-sm">
+              <Card
+                key={index}
+                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-purple-400 dark:hover:border-purple-600 cursor-pointer backdrop-blur-sm"
+              >
                 <CardHeader>
                   <CardTitle className="text-lg">{model.name}</CardTitle>
                   <div className="text-xs text-muted-foreground">ID: {model.model_id}</div>

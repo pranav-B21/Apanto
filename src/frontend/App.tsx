@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import { useState, useEffect } from "react";
+import DarkModeToggle from "@/components/DarkModeToggle";
 
 const queryClient = new QueryClient();
 
@@ -61,27 +62,15 @@ const App = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                    onClick={toggleDarkMode}
-                    className="ml-2 rounded-full hover:bg-accent hover:text-accent-foreground transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                    aria-label="Toggle dark mode"
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="ml-2 rounded-full text-xl"
                   >
-                    <div className="relative w-5 h-5">
-                      <Sun className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
-                        darkMode 
-                          ? 'rotate-90 scale-0 opacity-0' 
-                          : 'rotate-0 scale-100 opacity-100'
-                      }`} />
-                      <Moon className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
-                        darkMode 
-                          ? 'rotate-0 scale-100 opacity-100' 
-                          : '-rotate-90 scale-0 opacity-0'
-                      }`} />
-                    </div>
+                    {darkMode ? "☀️" : "🌙"}
                   </Button>
                 }
               />
             } />
-            <Route path="/chat" element={<Chat />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

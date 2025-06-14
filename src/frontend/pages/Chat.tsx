@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { apiService, type ChatRequest, type ChatResponse, type Enhancement, type ModelInfo } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import DarkModeToggle from "@/components/DarkModeToggle";
 
 interface Message {
   id: string;
@@ -47,7 +48,12 @@ interface Message {
   isLocal?: boolean;
 }
 
-const Chat = () => {
+interface ChatProps {
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -341,6 +347,7 @@ const Chat = () => {
               <Badge variant="outline" className="bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
                 ● Online
               </Badge>
+              <DarkModeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
             </div>
           </div>
         </div>
@@ -554,7 +561,7 @@ const Chat = () => {
         {/* Prompt Enhancements */}
         {showEnhancements && (
           <div className="mx-4 mb-2">
-            <Card className="bg-white/90 backdrop-blur-sm border-purple-200">
+            <Card className="bg-card/90 backdrop-blur-sm border-purple-200 dark:border-purple-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center">
                   <Zap className="h-4 w-4 mr-2 text-purple-500" />
