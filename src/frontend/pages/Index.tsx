@@ -17,12 +17,14 @@ import {
   Shield
 } from 'lucide-react';
 import { apiService, ModelInfo } from '@/lib/api';
+import DarkModeToggle from "@/components/DarkModeToggle";
 
 interface IndexProps {
-  darkModeToggle?: React.ReactNode;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
+const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
   const features = [
     {
       icon: Target,
@@ -117,11 +119,11 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
+              <Link to="/" className="flex items-center space-x-2">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                   Apanto
                 </h1>
-              </div>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/chat" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
@@ -133,7 +135,7 @@ const Index: React.FC<IndexProps> = ({ darkModeToggle }) => {
               <a href="#pricing" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 Pricing
               </a>
-              {darkModeToggle}
+              <DarkModeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
               <Button variant="outline" className="mr-2">
                 Sign In
               </Button>
