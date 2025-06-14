@@ -124,6 +124,29 @@ class DatabaseManager:
         models = self.load_models_from_db()
         return [model for model in models if category in model.get('scores', {})]
 
+    def load_all_models_raw(self) -> list[dict]:
+        """
+        Load all models from the models table, regardless of whether they have scores.
+        Returns a list of dicts with all columns from the models table.
+        """
+        conn = self.get_connection()
+        if not conn:
+            print("⚠️ Could not connect to database, falling back to empty list")
+            return []
+        try:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            query = "SELECT * FROM models ORDER BY name;"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            print(f"✅ Loaded {len(rows)} models from models table (raw)")
+            return rows
+        except Exception as e:
+            print(f"❌ Error loading all models from models table: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+
 
 # Global database manager instance
 db_manager = DatabaseManager()

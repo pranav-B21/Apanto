@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any, Optional
@@ -40,6 +40,8 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     prompt: str
     priority: str = "accuracy"  # accuracy, speed, cost
+    session_id: Optional[str] = None
+    model_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -72,6 +74,35 @@ class HostModelRequest(BaseModel):
 
 # Global variables to cache models
 cached_models = None
+
+# --- LLM Memory Store ---
+from threading import Lock
+
+class SessionMemory:
+    def __init__(self, max_turns: int = 8):
+        self.memory: Dict[str, List[Dict[str, str]]] = {}
+        self.lock = Lock()
+        self.max_turns = max_turns
+
+    def get_history(self, session_id: str) -> List[Dict[str, str]]:
+        with self.lock:
+            return self.memory.get(session_id, [])
+
+    def append(self, session_id: str, role: str, content: str):
+        with self.lock:
+            if session_id not in self.memory:
+                self.memory[session_id] = []
+            self.memory[session_id].append({"role": role, "content": content})
+            # Keep only the last N turns
+            self.memory[session_id] = self.memory[session_id][-self.max_turns:]
+
+    def clear(self, session_id: str):
+        with self.lock:
+            if session_id in self.memory:
+                del self.memory[session_id]
+
+# Instantiate global memory store
+session_memory = SessionMemory(max_turns=8)
 
 def get_models():
     """Get cached models or load them if not cached"""
@@ -114,6 +145,9 @@ async def chat_endpoint(request: ChatRequest):
         import time
         start_time = time.time()
         
+        # 0. Get session_id (use a default if not provided)
+        session_id = request.session_id or "default"
+        
         # 1. Classify the prompt type
         task_type = classify_prompt(request.prompt)
         
@@ -122,23 +156,45 @@ async def chat_endpoint(request: ChatRequest):
         if not models:
             raise HTTPException(status_code=500, detail="No models available")
         
-        # 3. Select the best model for this prompt and priority
-        selected_model, top_3_models = select_best_model(
-            models, 
-            task_type, 
-            request.priority
-        )
-        
-        # 4. Run the prompt on the selected model
-        try:
-            ai_response = run_prompt_on_llm(
-                selected_model["model_id"], 
-                request.prompt
+        # 3. Select the model: use provided model_id if present, else select best
+        if request.model_id:
+            selected_model = next((m for m in models if m["model_id"] == request.model_id), None)
+            if not selected_model:
+                raise HTTPException(status_code=400, detail=f"Model ID {request.model_id} not found")
+            # For top_3_models, just return the selected one first
+            top_3_models = [selected_model["name"]] + [m["name"] for m in models if m["model_id"] != request.model_id][:2]
+        else:
+            selected_model, top_3_models = select_best_model(
+                models, 
+                task_type, 
+                request.priority
             )
+        
+        # 4. Prepare LLM context (last N messages)
+        history = session_memory.get_history(session_id)
+        context_messages = history[-session_memory.max_turns:] if history else []
+        context_messages.append({"role": "user", "content": request.prompt})
+        
+        # 5. Run the prompt on the selected model (pass context if supported)
+        try:
+            # If your LLM supports chat history, pass context_messages instead of just prompt
+            # For now, join messages for simple LLMs
+            if hasattr(selected_model, 'supports_chat') and selected_model.supports_chat:
+                ai_response = run_prompt_on_llm(
+                    selected_model["model_id"],
+                    context_messages
+                )
+            else:
+                # Fallback: concatenate context for plain LLMs
+                prompt_with_context = "\n".join([m["content"] for m in context_messages])
+                ai_response = run_prompt_on_llm(
+                    selected_model["model_id"],
+                    prompt_with_context
+                )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"LLM inference failed: {str(e)}")
         
-        # 5. Calculate metrics
+        # 6. Calculate metrics
         end_time = time.time()
         response_time = end_time - start_time
         
@@ -150,6 +206,10 @@ async def chat_endpoint(request: ChatRequest):
         
         # Get confidence from model selection (or default)
         confidence = 85.0  # You could enhance this based on model scoring
+        
+        # 7. Update memory with user and assistant turns
+        session_memory.append(session_id, "user", request.prompt)
+        session_memory.append(session_id, "assistant", ai_response)
         
         return ChatResponse(
             response=ai_response,
