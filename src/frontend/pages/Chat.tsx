@@ -249,9 +249,9 @@ const Chat = () => {
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Left Sidebar */}
-      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white/80 backdrop-blur-md border-r border-white/20 overflow-hidden`}>
+      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-background/80 backdrop-blur-md border-r border-border overflow-hidden`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
@@ -270,16 +270,16 @@ const Chat = () => {
           </Button>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Conversations</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Conversations</h3>
             {conversations.map((conv) => (
               <div
                 key={conv.id}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  conv.active ? 'bg-purple-100 border border-purple-200' : 'hover:bg-gray-100'
+                  conv.active ? 'bg-purple-100 border border-purple-200 dark:bg-purple-900/40 dark:border-purple-700' : 'hover:bg-muted dark:hover:bg-muted/40'
                 }`}
               >
-                <div className="font-medium text-sm text-gray-900 truncate">{conv.title}</div>
-                <div className="text-xs text-gray-500 flex items-center mt-1">
+                <div className="font-medium text-sm text-foreground truncate">{conv.title}</div>
+                <div className="text-xs text-muted-foreground flex items-center mt-1">
                   <Clock className="h-3 w-3 mr-1" />
                   {conv.timestamp}
                 </div>
@@ -288,12 +288,12 @@ const Chat = () => {
           </div>
 
           {/* Model Selection */}
-          <div className="p-4 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Select Model</h3>
+          <div className="p-4 border-t border-border">
+            <h3 className="text-sm font-medium text-foreground mb-2">Select Model</h3>
             <select
               value={selectedModel || ''}
               onChange={(e) => setSelectedModel(e.target.value || null)}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              className="w-full p-2 border border-border rounded-md text-sm bg-background text-foreground"
             >
               <option value="">Auto-select (Recommended)</option>
               {availableModels.map((model) => (
@@ -316,7 +316,7 @@ const Chat = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-white/20 p-4">
+        <div className="bg-background/80 backdrop-blur-md border-b border-border p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {!sidebarOpen && (
@@ -326,7 +326,7 @@ const Chat = () => {
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
                 <Zap className="h-3 h-3 mr-1" />
                 {lastAiMessage?.model || 'LLaMA3-70B'}
               </Badge>
@@ -338,7 +338,7 @@ const Chat = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Host Model
               </Button>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
                 ● Online
               </Badge>
             </div>
@@ -347,14 +347,14 @@ const Chat = () => {
 
         {/* Intelligent Routing Insights Panel */}
         {lastAiMessage && (
-          <div className="p-4 border-b border-white/20">
-            <Card className="bg-white/90 backdrop-blur-sm border-purple-200">
+          <div className="p-4 border-b border-border">
+            <Card className="bg-card/90 backdrop-blur-sm border-purple-200 dark:border-purple-700">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <CardTitle className="text-lg">Intelligent Routing Active</CardTitle>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
                     <CheckCircle className="w-3 h-3 mr-1" />
                     Optimized
                   </Badge>
@@ -363,47 +363,47 @@ const Chat = () => {
               <CardContent>
                 <div className="grid grid-cols-3 gap-8">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Target className="w-5 h-5 text-purple-600" />
+                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
+                      <Target className="w-5 h-5 text-purple-600 dark:text-purple-300" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Task Detected</p>
-                      <p className="font-medium text-gray-900">{formatTaskType(lastAiMessage.taskType || 'General Chat')}</p>
+                      <p className="text-sm text-muted-foreground">Task Detected</p>
+                      <p className="font-medium text-foreground">{formatTaskType(lastAiMessage.taskType || 'General Chat')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-300" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-2">Confidence</p>
+                      <p className="text-sm text-muted-foreground mb-2">Confidence</p>
                       <div className="flex items-center space-x-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div className="w-24 bg-muted rounded-full h-2">
                           <div 
-                            className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                            className="bg-green-500 dark:bg-green-400 h-2 rounded-full transition-all duration-300" 
                             style={{ width: `${lastAiMessage.confidence}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{lastAiMessage.confidence}%</span>
+                        <span className="text-sm font-medium text-foreground">{lastAiMessage.confidence}%</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Brain className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                      <Brain className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Selected Model</p>
-                      <p className="font-medium text-gray-900">{lastAiMessage.model}</p>
+                      <p className="text-sm text-muted-foreground">Selected Model</p>
+                      <p className="font-medium text-foreground">{lastAiMessage.model}</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    <span className="text-purple-600 font-medium">Reasoning:</span> Default routing for general conversation
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-purple-600 dark:text-purple-300 font-medium">Reasoning:</span> Default routing for general conversation
                   </p>
                 </div>
               </CardContent>
@@ -413,8 +413,8 @@ const Chat = () => {
 
         {/* Host Model Form */}
         {showHostForm && (
-          <div className="p-4 border-b border-white/20">
-            <Card className="bg-white/90 backdrop-blur-sm border-gray-200">
+          <div className="p-4 border-b border-border">
+            <Card className="bg-card/90 backdrop-blur-sm border-border">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Host Your Model</CardTitle>
@@ -422,7 +422,7 @@ const Chat = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowHostForm(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -431,7 +431,7 @@ const Chat = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="model-url" className="text-gray-700 text-sm">
+                    <Label htmlFor="model-url" className="text-muted-foreground text-sm">
                       Hugging Face Model URL
                     </Label>
                     <Input
@@ -440,12 +440,12 @@ const Chat = () => {
                       placeholder="https://huggingface.co/username/model-name"
                       value={modelUrl}
                       onChange={(e) => setModelUrl(e.target.value)}
-                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="custom-name" className="text-gray-700 text-sm">
+                    <Label htmlFor="custom-name" className="text-muted-foreground text-sm">
                       Custom Model Name
                     </Label>
                     <Input
@@ -454,7 +454,7 @@ const Chat = () => {
                       placeholder="My Custom Model"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
-                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
@@ -493,7 +493,7 @@ const Chat = () => {
                   <div className={`rounded-2xl p-4 ${
                     message.isUser 
                       ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
-                      : 'bg-white/80 backdrop-blur-sm border border-white/20'
+                      : 'bg-card text-foreground border border-border'
                   }`}>
                     <div className="flex items-center gap-2 mb-2">
                       {!message.isUser && (
@@ -534,7 +534,7 @@ const Chat = () => {
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">AI</AvatarFallback>
                   </Avatar>
-                  <div className="rounded-2xl p-4 bg-white/80 backdrop-blur-sm border border-white/20">
+                  <div className="rounded-2xl p-4 bg-card text-foreground border border-border">
                     <div className="flex items-center space-x-2">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
@@ -582,7 +582,7 @@ const Chat = () => {
         )}
 
         {/* Input Area */}
-        <div className="p-4 bg-white/80 backdrop-blur-md border-t border-white/20">
+        <div className="p-4 bg-card border-t border-border">
           <div className="max-w-4xl mx-auto">
             <div className="relative">
               <Textarea
@@ -590,7 +590,7 @@ const Chat = () => {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 placeholder="Ask me anything... I'll route it to the perfect AI model"
-                className="pr-12 min-h-[60px] resize-none bg-white/90 backdrop-blur-sm border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                className="pr-12 min-h-[60px] resize-none bg-card text-foreground border-border placeholder:text-muted-foreground focus:border-purple-500 focus:ring-purple-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

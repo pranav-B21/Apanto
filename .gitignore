@@ -76,6 +76,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+apanto-venv/
 
 # mypy
 .mypy_cache/
