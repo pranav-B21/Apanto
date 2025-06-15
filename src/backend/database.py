@@ -57,6 +57,7 @@ class DatabaseManager:
             print("⚠️ Could not connect to database, falling back to empty list")
             return []
         
+        cursor = None
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
@@ -106,6 +107,8 @@ class DatabaseManager:
             
         except Exception as e:
             print(f"❌ Error loading models from database: {e}")
+            if conn:
+                conn.rollback()  # Rollback the transaction on error
             return []
         finally:
             if cursor:
@@ -133,6 +136,7 @@ class DatabaseManager:
         if not conn:
             print("⚠️ Could not connect to database, falling back to empty list")
             return []
+        cursor = None
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             query = "SELECT * FROM models ORDER BY name;"
@@ -142,6 +146,8 @@ class DatabaseManager:
             return rows
         except Exception as e:
             print(f"❌ Error loading all models from models table: {e}")
+            if conn:
+                conn.rollback()  # Rollback the transaction on error
             return []
         finally:
             if cursor:
