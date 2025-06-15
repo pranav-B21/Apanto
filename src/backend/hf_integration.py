@@ -21,7 +21,7 @@ load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")  # Optional, for private models
 HF_INFERENCE_API_BASE = "https://api-inference.huggingface.co/models/"
 
-class ModelLoader:
+class LocalModelLoader:
     """Handles loading and managing local Hugging Face models"""
     
     def __init__(self):
@@ -134,7 +134,7 @@ class HuggingFaceHostingService:
     def __init__(self, db_manager):
         self.db_manager = db_manager
         self.hf_token = HF_API_TOKEN
-        self.local_loader = ModelLoader()
+        self.local_loader = LocalModelLoader()
         
     def parse_hf_url(self, url: str) -> Optional[Dict[str, str]]:
         """
@@ -219,6 +219,38 @@ class HuggingFaceHostingService:
                 return 'S'
         return 'Unknown'
     
+    def test_model_inference(self, model_id: str, test_prompt: str = "Hello") -> Dict[str, Any]:
+        """
+        Test if the model can be loaded locally
+        """
+        try:
+            # Try loading the model locally
+            self.local_loader.load_model(model_id)
+            
+            # Test generation
+            result = self.local_loader.generate_text(model_id, test_prompt)
+            
+            if result['success']:
+                return {
+                    'success': True,
+                    'response': result['text'],
+                    'latency': None  # TODO: Add timing
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result['error']
+                }
+                
+        except Exception as e:
+            print('Exception in test_model_inference:', e)
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'error': f'Model loading error: {str(e)}'
+            }
+    
     def register_model(self, user_id: str, model_url: str, custom_name: str = None) -> Dict[str, Any]:
         """
         Register a new Hugging Face model for a user
@@ -243,6 +275,21 @@ class HuggingFaceHostingService:
                 'error': f"Model validation failed: {validation.get('error', 'Unknown error')}"
             }
         
+        # Test inference
+        inference_test = self.test_model_inference(model_id)
+        print('Inference test result:', inference_test)
+        if not inference_test.get('success'):
+            if inference_test.get('error', '').startswith('Inference failed: HTTP 404'):
+                return {
+                    'success': False,
+                    'error': "This model is not available for hosted inference via the Hugging Face API. Please choose a different model."
+                }
+            return {
+                'success': False,
+                'error': f"Model inference test failed: {inference_test.get('error', 'Unknown error')}",
+                'details': inference_test.get('details', None)
+            }
+        
         # Generate unique ID for this hosted model instance
         hosted_model_id = self._generate_hosted_model_id(user_id, model_id)
         
@@ -257,14 +304,14 @@ class HuggingFaceHostingService:
             'pipeline_tag': validation.get('pipeline_tag', 'text-generation'),
             'model_size': validation.get('model_size', 'Unknown'),
             'license': validation.get('license', 'unknown'),
-            'status': 'active',
+            'status': 'loading' if inference_test.get('status') == 'loading' else 'active',
             'registered_at': datetime.utcnow().isoformat(),
             'metadata': {
                 'tags': validation.get('tags', []),
                 'language': validation.get('language', ['en']),
                 'downloads': validation.get('downloads', 0),
                 'likes': validation.get('likes', 0),
-                'test_latency': None
+                'test_latency': inference_test.get('latency', None)
             }
         }
         print('Prepared model_data for DB:', model_data)
@@ -272,15 +319,19 @@ class HuggingFaceHostingService:
         # Store in database
         try:
             self._store_hosted_model(model_data)
+            
+            # Also add to the models table with estimated scores
             self._add_to_models_table(model_data)
+            
             return {
                 'success': True,
                 'hosted_model_id': hosted_model_id,
                 'model_id': model_id,
                 'custom_name': model_data['custom_name'],
                 'status': model_data['status'],
-                'message': 'Model successfully registered'
+                'message': 'Model successfully registered' if model_data['status'] == 'active' else 'Model registered and is loading'
             }
+            
         except Exception as e:
             print('Exception in /api/host-model:', e)
             import traceback
@@ -371,8 +422,20 @@ class HuggingFaceHostingService:
             cursor = conn.cursor()
             
             print('Inserting into models table:', model_data)
+            # Insert into models table
+            cursor.execute("""
+                INSERT INTO models (name, model_id, is_huggingface, huggingface_url)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (model_id) DO NOTHING;
+            """, (
+                model_data['custom_name'],
+                f"hf-{model_data['hosted_model_id']}",  # Prefix to distinguish hosted models
+                True,
+                f"https://huggingface.co/{model_data['hf_model_id']}"
+            ))
             
             # Add estimated scores based on model size and metadata
+            # This is a simplified scoring - you might want to enhance this
             size_scores = {
                 'XXL': {'accuracy': 0.95, 'speed': 0.3, 'cost': 0.9},
                 'XL': {'accuracy': 0.9, 'speed': 0.4, 'cost': 0.8},
@@ -391,23 +454,21 @@ class HuggingFaceHostingService:
             elif model_data['pipeline_tag'] == 'text2text-generation':
                 categories.extend(['summarization', 'translation'])
             
-            now = datetime.utcnow()
             # Insert scores for each category
             for category in categories:
                 cursor.execute("""
-                    INSERT INTO model_scores (model_id, category, accuracy, speed, cost, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO model_scores (model_id, category, accuracy, speed, cost)
+                    VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (model_id, category) DO UPDATE SET
                         accuracy = EXCLUDED.accuracy,
                         speed = EXCLUDED.speed,
                         cost = EXCLUDED.cost;
                 """, (
-                    model_data['hosted_model_id'],
+                    f"hf-{model_data['hosted_model_id']}",
                     category,
                     base_scores['accuracy'],
                     base_scores['speed'],
-                    base_scores['cost'],
-                    now
+                    base_scores['cost']
                 ))
             
             conn.commit()
@@ -458,5 +519,102 @@ class HuggingFaceHostingService:
             conn.commit()
             
         finally:
-            cursor.close() 
+            cursor.close()
+
+
+class HuggingFaceInference:
+    """Handles inference for Hugging Face hosted models"""
+    
+    def __init__(self, hf_token: Optional[str] = None):
+        self.hf_token = hf_token or HF_API_TOKEN
+        self.base_url = HF_INFERENCE_API_BASE
+    
+    def run_inference(self, model_id: str, prompt: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Run inference on a Hugging Face model
+        """
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        if self.hf_token:
+            headers['Authorization'] = f'Bearer {self.hf_token}'
+        
+        # Default parameters
+        default_params = {
+            "max_new_tokens": 500,
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "do_sample": True,
+            "return_full_text": False
+        }
+        
+        if parameters:
+            default_params.update(parameters)
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": default_params
+        }
+        
+        inference_url = f"{self.base_url}{model_id}"
+        
+        try:
+            response = requests.post(
+                inference_url,
+                json=payload,
+                headers=headers,
+                timeout=60  # Longer timeout for larger models
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Handle different response formats
+                if isinstance(result, list) and len(result) > 0:
+                    # Standard text generation response
+                    return {
+                        'success': True,
+                        'text': result[0].get('generated_text', ''),
+                        'latency': response.elapsed.total_seconds()
+                    }
+                elif isinstance(result, dict):
+                    # Some models return dict directly
+                    return {
+                        'success': True,
+                        'text': result.get('generated_text', str(result)),
+                        'latency': response.elapsed.total_seconds()
+                    }
+                else:
+                    return {
+                        'success': True,
+                        'text': str(result),
+                        'latency': response.elapsed.total_seconds()
+                    }
+                    
+            elif response.status_code == 503:
+                # Model is loading
+                estimated_time = response.headers.get('X-Estimated-Time', '60')
+                return {
+                    'success': False,
+                    'error': f'Model is loading. Estimated time: {estimated_time}s',
+                    'status': 'loading',
+                    'estimated_time': estimated_time
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Inference failed: HTTP {response.status_code}',
+                    'details': response.text
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                'success': False,
+                'error': 'Request timed out. The model might be too large or busy.'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Inference error: {str(e)}'
+            } 
             

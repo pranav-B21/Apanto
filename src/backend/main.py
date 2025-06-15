@@ -12,7 +12,6 @@ from infer import run_prompt_on_llm
 from scorer import load_models, select_best_model
 from analyzer import classify_prompt
 from database import load_models_from_database, db_manager
-from hf_integration import ModelLoader, HuggingFaceHostingService
 
 # Load environment variables
 load_dotenv()
@@ -105,12 +104,6 @@ class SessionMemory:
 # Instantiate global memory store
 session_memory = SessionMemory(max_turns=8)
 
-# Instantiate global model loader
-model_loader = ModelLoader()
-
-# Instantiate global HuggingFaceHostingService
-hosting_service = HuggingFaceHostingService(db_manager)
-
 def get_models():
     """Get cached models or load them if not cached"""
     global cached_models
@@ -187,25 +180,17 @@ async def chat_endpoint(request: ChatRequest):
             # If your LLM supports chat history, pass context_messages instead of just prompt
             # For now, join messages for simple LLMs
             if hasattr(selected_model, 'supports_chat') and selected_model.supports_chat:
-                ai_response = model_loader.generate_text(
+                ai_response = run_prompt_on_llm(
                     selected_model["model_id"],
                     context_messages
                 )
-                if isinstance(ai_response, dict) and ai_response.get('success'):
-                    ai_response = ai_response.get('text', '')
-                elif isinstance(ai_response, dict):
-                    raise Exception(ai_response.get('error', 'Unknown error'))
             else:
                 # Fallback: concatenate context for plain LLMs
                 prompt_with_context = "\n".join([m["content"] for m in context_messages])
-                ai_response = model_loader.generate_text(
+                ai_response = run_prompt_on_llm(
                     selected_model["model_id"],
                     prompt_with_context
                 )
-                if isinstance(ai_response, dict) and ai_response.get('success'):
-                    ai_response = ai_response.get('text', '')
-                elif isinstance(ai_response, dict):
-                    raise Exception(ai_response.get('error', 'Unknown error'))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"LLM inference failed: {str(e)}")
         
@@ -358,14 +343,86 @@ async def get_model_analytics():
 async def host_model(request: HostModelRequest):
     """Host a new Hugging Face model"""
     try:
-        model_url = request.model_url.strip()
-        custom_name = request.custom_name
-
-        # Use HuggingFaceHostingService to parse, validate, and register the model
-        result = hosting_service.register_model(user_id="default_user", model_url=model_url, custom_name=custom_name)
-        if not result.get('success'):
-            raise HTTPException(status_code=400, detail=result.get('error', 'Failed to register model'))
-        return result
+        model_id = request.model_url.strip()
+        
+        # Remove huggingface.co if present
+        model_id = model_id.replace("https://huggingface.co/", "")
+        model_id = model_id.replace("http://huggingface.co/", "")
+        
+        # Load model and tokenizer
+        try:
+            print(f"Starting to load model {model_id}...")
+            
+            # Load tokenizer with progress tracking
+            print("Loading tokenizer...")
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_id,
+                local_files_only=False,
+                resume_download=True
+            )
+            print("Tokenizer loaded successfully")
+            
+            # Load model with progress tracking
+            print("Loading model...")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                local_files_only=False,
+                resume_download=True,
+                low_cpu_mem_usage=True
+            )
+            print("Model loaded successfully")
+            
+            # Test inference
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"Moving model to {device}...")
+            model = model.to(device)
+            
+            # Simple test input
+            print("Running test inference...")
+            test_input = tokenizer("Hello, how are you?", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = model.generate(
+                    **test_input,
+                    max_new_tokens=50,
+                    temperature=0.2,
+                    top_p=0.9,
+                    do_sample=True
+                )
+            print("Test inference successful")
+            
+            # If we get here, model loaded successfully
+            return {
+                "success": True,
+                "message": f"Successfully loaded model {model_id}",
+                "model_id": model_id,
+                "device": device
+            }
+            
+        except Exception as e:
+            print(f"Error loading model {model_id}:")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            import traceback
+            print("Full traceback:")
+            traceback.print_exc()
+            
+            # Check if it's a download error
+            if "Connection" in str(e) or "timeout" in str(e).lower():
+                raise HTTPException(
+                    status_code=504,
+                    detail="Model download timed out. Please try again."
+                )
+            elif "KeyboardInterrupt" in str(e):
+                raise HTTPException(
+                    status_code=499,
+                    detail="Model download was interrupted. Please try again."
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to load model: {str(e)}"
+                )
+            
     except HTTPException:
         raise
     except Exception as e:
