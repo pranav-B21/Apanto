@@ -58,6 +58,7 @@ class ChatResponse(BaseModel):
     tokens_used: int
     estimated_cost: float
     top_3_models: List[str]
+    is_local: bool
 
 class ModelInfo(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -181,20 +182,38 @@ async def chat_endpoint(request: ChatRequest):
         
         # 5. Run the prompt on the selected model (pass context if supported)
         try:
-            # If your LLM supports chat history, pass context_messages instead of just prompt
-            # For now, join messages for simple LLMs
-            if hasattr(selected_model, 'supports_chat') and selected_model.supports_chat:
-                ai_response = run_prompt_on_llm(
-                    selected_model["model_id"],
-                    context_messages
-                )
-            else:
-                # Fallback: concatenate context for plain LLMs
+            if selected_model.get("is_huggingface"):
+                # Use local transformers for hosted Hugging Face models
                 prompt_with_context = "\n".join([m["content"] for m in context_messages])
-                ai_response = run_prompt_on_llm(
-                    selected_model["model_id"],
-                    prompt_with_context
-                )
+                print(f"[DEBUG] Prompt sent to HF model ({selected_model['name']}):\n{prompt_with_context}\n---")
+                # Extract the Hugging Face model_id from the huggingface_url or model_id
+                # If huggingface_url is present, use the last two segments as org/model
+                if selected_model.get("huggingface_url"):
+                    url_parts = selected_model["huggingface_url"].rstrip("/").split("/")
+                    hf_model_id = "/".join(url_parts[-2:])
+                else:
+                    # Fallback: try to use model_id directly (strip 'hf-' prefix if present)
+                    hf_model_id = selected_model["model_id"].removeprefix("hf-")
+                result = hf_service.local_loader.generate_text(hf_model_id, prompt_with_context, task_type)
+                print(f"Output from model: {result}")
+                ai_response = result.get("output", "[No response generated]")
+                is_local = True
+            else:
+                # If your LLM supports chat history, pass context_messages instead of just prompt
+                # For now, join messages for simple LLMs
+                if hasattr(selected_model, 'supports_chat') and selected_model.supports_chat:
+                    ai_response = run_prompt_on_llm(
+                        selected_model["model_id"],
+                        context_messages
+                    )
+                else:
+                    # Fallback: concatenate context for plain LLMs
+                    prompt_with_context = "\n".join([m["content"] for m in context_messages])
+                    ai_response = run_prompt_on_llm(
+                        selected_model["model_id"],
+                        prompt_with_context
+                    )
+                is_local = False
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"LLM inference failed: {str(e)}")
         
@@ -223,7 +242,8 @@ async def chat_endpoint(request: ChatRequest):
             response_time=response_time,
             tokens_used=tokens_used,
             estimated_cost=estimated_cost,
-            top_3_models=top_3_models
+            top_3_models=top_3_models,
+            is_local=is_local
         )
         
     except HTTPException:

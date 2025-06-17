@@ -15,6 +15,7 @@ from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, AutoModel
 import torch
+from templates import get_template, get_expected_format
 
 load_dotenv()
 
@@ -30,6 +31,7 @@ class LocalModelLoader:
     
     def load_model(self, model_id: str) -> Dict[str, Any]:
         """Load a model locally and cache it"""
+        print("first model id" + model_id)
         if model_id in self.loaded_models:
             return self.loaded_models[model_id]
         
@@ -69,7 +71,7 @@ class LocalModelLoader:
         except Exception as e:
             raise Exception(f"Failed to load model {model_id}: {str(e)}")
     
-    def generate_text(self, model_id: str, prompt: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+    def generate_text(self, model_id: str, prompt_with_context: str, task_type: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
         """Generate text or embeddings using a locally loaded model"""
         if model_id not in self.loaded_models:
             self.load_model(model_id)
@@ -78,6 +80,15 @@ class LocalModelLoader:
         model = model_data['model']
         tokenizer = model_data['tokenizer']
         model_type = model_data.get('model_type')
+
+        # Get the appropriate template for the task type
+        template = get_template(task_type)
+        expected_format = get_expected_format(task_type)
+        
+        # Format the prompt with the context
+        prompt = template.format(prompt_with_context=prompt_with_context)
+        print('task type:' + task_type)
+        print('prompt going into model: '+ prompt)
         
         try:
             # Tokenize input
@@ -97,10 +108,11 @@ class LocalModelLoader:
             else:
                 # For causal models, generate text
                 default_params = {
-                    "max_new_tokens": 500,
+                    "max_new_tokens": 1000,  # Increased for more detailed responses
                     "temperature": 0.7,
                     "top_p": 0.95,
-                    "do_sample": True
+                    "do_sample": True,
+                    "repetition_penalty": 1.2  # Added to reduce repetition
                 }
                 
                 if parameters:
@@ -112,13 +124,20 @@ class LocalModelLoader:
                         max_new_tokens=default_params["max_new_tokens"],
                         temperature=default_params["temperature"],
                         top_p=default_params["top_p"],
-                        do_sample=default_params["do_sample"]
+                        do_sample=default_params["do_sample"],
+                        repetition_penalty=default_params["repetition_penalty"]
                     )
                 
                 generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                
+                # Remove the prompt from the generated text
+                if generated_text.startswith(prompt):
+                    generated_text = generated_text[len(prompt):].strip()
+                
                 return {
                     'success': True,
-                    'text': generated_text,
+                    'output': generated_text,
+                    'format': expected_format,
                     'latency': None
                 }
             
@@ -228,7 +247,7 @@ class HuggingFaceHostingService:
             self.local_loader.load_model(model_id)
             
             # Test generation
-            result = self.local_loader.generate_text(model_id, test_prompt)
+            result = self.local_loader.generate_text(model_id, test_prompt, None)
             
             if result['success']:
                 return {
@@ -275,6 +294,7 @@ class HuggingFaceHostingService:
                 'error': f"Model validation failed: {validation.get('error', 'Unknown error')}"
             }
         
+        
         # Test inference
         inference_test = self.test_model_inference(model_id)
         print('Inference test result:', inference_test)
@@ -289,6 +309,7 @@ class HuggingFaceHostingService:
                 'error': f"Model inference test failed: {inference_test.get('error', 'Unknown error')}",
                 'details': inference_test.get('details', None)
             }
+        
         
         # Generate unique ID for this hosted model instance
         hosted_model_id = self._generate_hosted_model_id(user_id, model_id)
@@ -422,6 +443,23 @@ class HuggingFaceHostingService:
             cursor = conn.cursor()
             
             print('Inserting into models table:', model_data)
+            
+            # First, ensure the required columns exist
+            cursor.execute("""
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                 WHERE table_name = 'models' AND column_name = 'is_huggingface') THEN
+                        ALTER TABLE models ADD COLUMN is_huggingface BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                 WHERE table_name = 'models' AND column_name = 'huggingface_url') THEN
+                        ALTER TABLE models ADD COLUMN huggingface_url TEXT;
+                    END IF;
+                END $$;
+            """)
+            
             # Insert into models table
             cursor.execute("""
                 INSERT INTO models (name, model_id, is_huggingface, huggingface_url)
@@ -448,7 +486,7 @@ class HuggingFaceHostingService:
             base_scores = size_scores.get(model_data['model_size'], size_scores['Unknown'])
             
             # Determine categories based on pipeline_tag
-            categories = ['qa', 'reasoning']  # Default categories
+            categories = ['qa', 'reasoning']
             if model_data['pipeline_tag'] == 'text-generation':
                 categories.extend(['coding', 'creative'])
             elif model_data['pipeline_tag'] == 'text2text-generation':
@@ -521,100 +559,3 @@ class HuggingFaceHostingService:
         finally:
             cursor.close()
 
-
-class HuggingFaceInference:
-    """Handles inference for Hugging Face hosted models"""
-    
-    def __init__(self, hf_token: Optional[str] = None):
-        self.hf_token = hf_token or HF_API_TOKEN
-        self.base_url = HF_INFERENCE_API_BASE
-    
-    def run_inference(self, model_id: str, prompt: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
-        """
-        Run inference on a Hugging Face model
-        """
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        if self.hf_token:
-            headers['Authorization'] = f'Bearer {self.hf_token}'
-        
-        # Default parameters
-        default_params = {
-            "max_new_tokens": 500,
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "do_sample": True,
-            "return_full_text": False
-        }
-        
-        if parameters:
-            default_params.update(parameters)
-        
-        payload = {
-            "inputs": prompt,
-            "parameters": default_params
-        }
-        
-        inference_url = f"{self.base_url}{model_id}"
-        
-        try:
-            response = requests.post(
-                inference_url,
-                json=payload,
-                headers=headers,
-                timeout=60  # Longer timeout for larger models
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                
-                # Handle different response formats
-                if isinstance(result, list) and len(result) > 0:
-                    # Standard text generation response
-                    return {
-                        'success': True,
-                        'text': result[0].get('generated_text', ''),
-                        'latency': response.elapsed.total_seconds()
-                    }
-                elif isinstance(result, dict):
-                    # Some models return dict directly
-                    return {
-                        'success': True,
-                        'text': result.get('generated_text', str(result)),
-                        'latency': response.elapsed.total_seconds()
-                    }
-                else:
-                    return {
-                        'success': True,
-                        'text': str(result),
-                        'latency': response.elapsed.total_seconds()
-                    }
-                    
-            elif response.status_code == 503:
-                # Model is loading
-                estimated_time = response.headers.get('X-Estimated-Time', '60')
-                return {
-                    'success': False,
-                    'error': f'Model is loading. Estimated time: {estimated_time}s',
-                    'status': 'loading',
-                    'estimated_time': estimated_time
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': f'Inference failed: HTTP {response.status_code}',
-                    'details': response.text
-                }
-                
-        except requests.exceptions.Timeout:
-            return {
-                'success': False,
-                'error': 'Request timed out. The model might be too large or busy.'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Inference error: {str(e)}'
-            } 
-            

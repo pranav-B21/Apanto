@@ -42,10 +42,10 @@ def load_models():
         print(f"✅ Loaded {len(all_models)} models from database (no Groq filtering)")
         return all_models
     
-    # Filter using Groq API
-    filtered = [m for m in all_models if m["model_id"] in live_model_ids]
+    # Filter: include models in Groq list OR is_huggingface is True
+    filtered = [m for m in all_models if (m["model_id"] in live_model_ids) or m.get("is_huggingface")]
 
-    dead = [m for m in all_models if m["model_id"] not in live_model_ids]
+    dead = [m for m in all_models if m not in filtered]
     for m in dead:
         print(f"🪦 Skipping decommissioned model: {m['name']} ({m['model_id']})")
 
