@@ -66,6 +66,8 @@ class DatabaseManager:
                 SELECT 
                     m.name,
                     m.model_id,
+                    m.is_huggingface,
+                    m.huggingface_url,
                     ms.category,
                     ms.accuracy,
                     ms.speed,
@@ -89,6 +91,8 @@ class DatabaseManager:
                     models[model_id] = {
                         'name': row['name'],
                         'model_id': row['model_id'],
+                        'is_huggingface': row.get('is_huggingface', False),
+                        'huggingface_url': row.get('huggingface_url'),
                         'scores': {}
                     }
                 
