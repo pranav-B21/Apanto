@@ -28,9 +28,10 @@ import {
   CheckCircle,
   Brain,
   TrendingUp,
-  Upload
+  Upload,
+  Sparkles
 } from 'lucide-react';
-import { apiService, type ChatRequest, type ChatResponse, type Enhancement, type ModelInfo } from '@/lib/api';
+import { apiService, type ChatRequest, type ChatResponse, type Enhancement, type ModelInfo, type ImprovePromptRequest, type ImprovePromptResponse } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import DarkModeToggle from "@/components/DarkModeToggle";
 
@@ -71,9 +72,8 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   ]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [enhancements, setEnhancements] = useState<Enhancement[]>([]);
-  const [showEnhancements, setShowEnhancements] = useState(false);
   const [showHostForm, setShowHostForm] = useState(false);
   const [modelUrl, setModelUrl] = useState('');
   const [customName, setCustomName] = useState('');
@@ -81,33 +81,13 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [improvedPromptSuggestion, setImprovedPromptSuggestion] = useState<string | null>(null);
 
   const conversations = [
     { id: '1', title: 'AI Model Routing', timestamp: '2 minutes ago', active: true },
     { id: '2', title: 'Code Generation Help', timestamp: '1 hour ago', active: false },
     { id: '3', title: 'Writing Assistant', timestamp: 'Yesterday', active: false },
   ];
-
-  // Get real-time prompt enhancements from backend
-  useEffect(() => {
-    const getEnhancements = async () => {
-      if (currentMessage.length > 10) {
-        try {
-          const suggestions = await apiService.getEnhancementSuggestions(currentMessage);
-          setEnhancements(suggestions);
-          setShowEnhancements(true);
-        } catch (error) {
-          console.error('Failed to get enhancement suggestions:', error);
-          setShowEnhancements(false);
-        }
-      } else {
-        setShowEnhancements(false);
-      }
-    };
-
-    const timeoutId = setTimeout(getEnhancements, 500); // Debounce API calls
-    return () => clearTimeout(timeoutId);
-  }, [currentMessage]);
 
   useEffect(() => {
     // Load available models on component mount
@@ -150,7 +130,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
     const messageToSend = currentMessage;
     setCurrentMessage('');
     setIsLoading(true);
-    setShowEnhancements(false);
+    setImprovedPromptSuggestion(null);
 
     try {
       const chatRequest: ChatRequest = {
@@ -194,12 +174,56 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
     }
   };
 
-  const applyEnhancement = (enhancement: Enhancement) => {
-    const enhancedPrompt = `${currentMessage}\n\n[Enhancement: ${enhancement.suggestion}]`;
-    setCurrentMessage(enhancedPrompt);
-    setShowEnhancements(false);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
+  const handleImprovePrompt = async () => {
+    if (!currentMessage.trim()) {
+      toast({
+        title: "No Prompt",
+        description: "Please enter a prompt to improve",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImprovingPrompt(true);
+    setImprovedPromptSuggestion(null);
+    
+    try {
+      const request: ImprovePromptRequest = {
+        prompt: currentMessage,
+        include_suggestions: true
+      };
+
+      const response: ImprovePromptResponse = await apiService.improvePrompt(request);
+
+      if (response.success) {
+        setImprovedPromptSuggestion(response.improved_prompt);
+        
+        toast({
+          title: "Suggestion Ready!",
+          description: `We've crafted an improved prompt for you.`,
+        });
+      } else {
+        throw new Error("Failed to improve prompt");
+      }
+    } catch (error) {
+      console.error('Failed to improve prompt:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to improve prompt",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImprovingPrompt(false);
+    }
+  };
+
+  const applyImprovedPrompt = () => {
+    if (improvedPromptSuggestion) {
+      setCurrentMessage(improvedPromptSuggestion);
+      setImprovedPromptSuggestion(null);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   };
 
@@ -558,31 +582,35 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
           </div>
         </ScrollArea>
 
-        {/* Prompt Enhancements */}
-        {showEnhancements && (
-          <div className="mx-4 mb-2">
-            <Card className="bg-card/90 backdrop-blur-sm border-purple-200 dark:border-purple-700">
+        {/* Improved Prompt Suggestion */}
+        {improvedPromptSuggestion && (
+          <div className="mx-4 mb-2 animate-fade-in">
+            <Card className="bg-card/90 backdrop-blur-sm border-orange-200 dark:border-orange-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center">
-                  <Zap className="h-4 w-4 mr-2 text-purple-500" />
-                  Prompt Enhancement Suggestions
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center">
+                    <Sparkles className="h-4 w-4 mr-2 text-orange-500" />
+                    Improved Prompt Suggestion
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setImprovedPromptSuggestion(null)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-2">
-                  {enhancements.map((enhancement) => (
-                    <div
-                      key={enhancement.id}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
-                      onClick={() => applyEnhancement(enhancement)}
-                    >
-                      <span className="text-sm">{enhancement.suggestion}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {enhancement.confidence}%
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{improvedPromptSuggestion}</p>
+                <Button
+                  onClick={applyImprovedPrompt}
+                  size="sm"
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none hover:from-yellow-600 hover:to-orange-600"
+                >
+                  Use this Prompt
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -597,7 +625,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 placeholder="Ask me anything... I'll route it to the perfect AI model"
-                className="pr-12 min-h-[60px] resize-none bg-card text-foreground border-border placeholder:text-muted-foreground focus:border-purple-500 focus:ring-purple-500"
+                className="pr-24 min-h-[60px] resize-none bg-card text-foreground border-border placeholder:text-muted-foreground focus:border-purple-500 focus:ring-purple-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -605,13 +633,29 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                   }
                 }}
               />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!currentMessage.trim() || isLoading}
-                className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              <div className="absolute right-2 bottom-2 flex space-x-1">
+                <Button
+                  onClick={handleImprovePrompt}
+                  disabled={!currentMessage.trim() || isLoading || isImprovingPrompt}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white border-none"
+                  title="Improve Prompt"
+                >
+                  {isImprovingPrompt ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!currentMessage.trim() || isLoading || isImprovingPrompt}
+                  className="h-8 w-8 p-0 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
               <span>{currentMessage.length} characters</span>

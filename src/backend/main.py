@@ -6,6 +6,8 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from transformers import AutoModel, AutoTokenizer, AutoConfig, AutoModelForCausalLM
 import torch
+import requests
+import json
 
 # Import our existing modules
 from infer import run_prompt_on_llm
@@ -13,6 +15,7 @@ from scorer import load_models, select_best_model
 from analyzer import classify_prompt
 from database import load_models_from_database, db_manager
 from hf_integration import HuggingFaceHostingService
+from prompt_improver import PromptImprover
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +24,9 @@ app = FastAPI(title="AI Smart Prompt Stream Backend", version="1.0.0")
 
 # Initialize HuggingFaceHostingService
 hf_service = HuggingFaceHostingService(db_manager)
+
+# Initialize prompt improver
+prompt_improver = PromptImprover()
 
 # Configure CORS
 app.add_middleware(
@@ -76,6 +82,23 @@ class EnhancementSuggestion(BaseModel):
 class HostModelRequest(BaseModel):
     model_url: str
     custom_name: Optional[str] = None
+
+class ImprovePromptRequest(BaseModel):
+    prompt: str
+    include_suggestions: bool = False
+
+class ImprovePromptResponse(BaseModel):
+    success: bool
+    original_prompt: str
+    improved_prompt: str
+    improvements_made: List[str]
+    reasoning: str
+    confidence: int
+    model_used: str
+    tokens_used: int
+    suggestions: Optional[List[str]] = None
+    priority: Optional[str] = None
+    estimated_impact: Optional[str] = None
 
 # Global variables to cache models
 cached_models = None
@@ -392,6 +415,61 @@ async def host_model(request: HostModelRequest):
         print("Full traceback:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/improve-prompt", response_model=ImprovePromptResponse)
+async def improve_prompt_endpoint(request: ImprovePromptRequest):
+    """Improve a prompt using Groq API with Llama model"""
+    try:
+        if not request.prompt.strip():
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+        
+        # Improve the prompt
+        result = prompt_improver.improve_prompt(request.prompt)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=f"Failed to improve prompt: {result.get('error', 'Unknown error')}")
+        
+        # Get suggestions if requested
+        suggestions_list = None
+        suggestions_data = None
+        if request.include_suggestions:
+            suggestions_result = prompt_improver.get_improvement_suggestions(request.prompt)
+            if suggestions_result["success"]:
+                suggestions_data = suggestions_result
+                # Process suggestions into a list of strings to be safe
+                if suggestions_data.get("suggestions"):
+                    suggestions_list = []
+                    for s in suggestions_data["suggestions"]:
+                        if isinstance(s, dict):
+                            # Heuristically find a string value.
+                            if 'suggestion' in s:
+                                suggestions_list.append(str(s['suggestion']))
+                            elif 'description' in s:
+                                suggestions_list.append(str(s['description']))
+                            else:
+                                # Fallback: serialize the whole dict
+                                suggestions_list.append(json.dumps(s))
+                        elif isinstance(s, str):
+                            suggestions_list.append(s)
+
+        return ImprovePromptResponse(
+            success=True,
+            original_prompt=result["original_prompt"],
+            improved_prompt=result["improved_prompt"],
+            improvements_made=result["improvements_made"],
+            reasoning=result["reasoning"],
+            confidence=result["confidence"],
+            model_used=result["model_used"],
+            tokens_used=result["tokens_used"],
+            suggestions=suggestions_list,
+            priority=suggestions_data["priority"] if suggestions_data else None,
+            estimated_impact=suggestions_data["estimated_impact"] if suggestions_data else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

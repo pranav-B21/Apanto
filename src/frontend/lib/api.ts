@@ -15,7 +15,7 @@ export interface ChatResponse {
   tokens_used: number;
   estimated_cost: number;
   top_3_models: string[];
-  is_local?: boolean;
+  is_local: boolean;
 }
 
 export interface Enhancement {
@@ -30,6 +30,25 @@ export interface ModelInfo {
   model_id: string;
   scores: Record<string, Record<string, number>>;
   is_local?: boolean;
+}
+
+export interface ImprovePromptRequest {
+  prompt: string;
+  include_suggestions?: boolean;
+}
+
+export interface ImprovePromptResponse {
+  success: boolean;
+  original_prompt: string;
+  improved_prompt: string;
+  improvements_made: string[];
+  reasoning: string;
+  confidence: number;
+  model_used: string;
+  tokens_used: number;
+  suggestions?: string[];
+  priority?: string;
+  estimated_impact?: string;
 }
 
 class ApiService {
@@ -74,6 +93,13 @@ class ApiService {
       body: JSON.stringify({ prompt }),
     });
     return response.enhancements;
+  }
+
+  async improvePrompt(request: ImprovePromptRequest): Promise<ImprovePromptResponse> {
+    return this.request<ImprovePromptResponse>('/improve-prompt', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   }
 
   async hostModel(modelUrl: string, customName?: string): Promise<{ success: boolean; message: string; model_id?: string }> {
