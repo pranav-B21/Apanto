@@ -126,13 +126,13 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/chat" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link to="/chat" className="text-foreground hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 Chat
               </Link>
-              <a href="#models" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <a href="#models" className="text-foreground hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 Models
               </a>
-              <a href="#pricing" className="text-foreground hover:text-purple-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <a href="#pricing" className="text-foreground hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 Pricing
               </a>
               <DarkModeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
@@ -265,11 +265,11 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 group hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-purple-400 dark:hover:border-purple-600 cursor-pointer backdrop-blur-sm"
+                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 group hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer backdrop-blur-sm"
               >
                 <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <feature.icon className="h-6 w-6 text-foreground" />
+                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <feature.icon className="h-6 w-6 text-white" />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
@@ -303,7 +303,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
             </div>
             {/* Arrow 1 */}
             <div className="hidden md:flex flex-col items-center justify-center flex-none mx-4">
-              <svg className="w-16 h-16 text-purple-400 dark:text-purple-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
+              <svg className="w-16 h-16 text-blue-400 dark:text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 24h32m0 0l-8-8m8 8l-8 8" />
               </svg>
             </div>
@@ -314,7 +314,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
             </div>
             {/* Arrow 2 */}
             <div className="hidden md:flex flex-col items-center justify-center flex-none mx-4">
-              <svg className="w-16 h-16 text-purple-400 dark:text-purple-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
+              <svg className="w-16 h-16 text-blue-400 dark:text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 48 48">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 24h32m0 0l-8-8m8 8l-8 8" />
               </svg>
             </div>
@@ -343,7 +343,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
             {models.map((model, index) => (
               <Card
                 key={index}
-                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-purple-400 dark:hover:border-purple-600 cursor-pointer backdrop-blur-sm"
+                className="p-6 border border-border bg-white/80 dark:bg-zinc-900/80 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer backdrop-blur-sm"
               >
                 <CardHeader>
                   <CardTitle className="text-lg">{model.name}</CardTitle>
@@ -385,9 +385,9 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
           
           <div className="grid md:grid-cols-3 gap-8">
             {pricingTiers.map((tier, index) => (
-              <Card key={index} className={`p-6 relative ${tier.popular ? 'border-purple-500 shadow-lg scale-105' : 'border-border'} bg-card/80 backdrop-blur-sm`}>
+              <Card key={index} className={`p-6 relative ${tier.popular ? 'border-blue-500 shadow-lg scale-105' : 'border-border'} bg-card/80 backdrop-blur-sm`}>
                 {tier.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500">
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white">
                     Most Popular
                   </Badge>
                 )}
@@ -409,7 +409,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
                     ))}
                   </ul>
                   <Button 
-                    className={`w-full ${tier.popular ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600' : ''}`}
+                    className={`w-full ${tier.popular ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
                     variant={tier.popular ? 'default' : 'outline'}
                   >
                     {tier.cta}
@@ -426,7 +426,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
+              <h3 className="text-2xl font-bold text-blue-600 mb-4">
                 Apanto
               </h3>
               <p className="text-muted-foreground">

@@ -301,7 +301,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
               <div
                 key={conv.id}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  conv.active ? 'bg-purple-100 border border-purple-200 dark:bg-purple-900/40 dark:border-purple-700' : 'hover:bg-muted dark:hover:bg-muted/40'
+                  conv.active ? 'bg-blue-100 border border-blue-200 dark:bg-blue-900/40 dark:border-blue-700' : 'hover:bg-muted dark:hover:bg-muted/40'
                 }`}
               >
                 <div className="font-medium text-sm text-foreground truncate">{conv.title}</div>
@@ -375,23 +375,19 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
         {/* Intelligent Routing Insights Panel */}
         {lastAiMessage && (
           <div className="p-4 border-b border-border">
-            <Card className="bg-card/90 backdrop-blur-sm border-purple-200 dark:border-purple-700">
+            <Card className="bg-card/90 backdrop-blur-sm border-blue-200 dark:border-blue-700">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <CardTitle className="text-lg">Intelligent Routing Active</CardTitle>
+                    <CardTitle className="text-lg">Intelligent Routing</CardTitle>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Optimized
-                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-8">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
-                      <Target className="w-5 h-5 text-purple-600 dark:text-purple-300" />
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                      <Target className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Task Detected</p>
@@ -430,7 +426,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                 
                 <div className="mt-4 pt-4 border-t border-border">
                   <p className="text-sm text-muted-foreground">
-                    <span className="text-purple-600 dark:text-purple-300 font-medium">Reasoning:</span> Default routing for general conversation
+                    <span className="text-blue-600 dark:text-blue-300 font-medium">Reasoning:</span> Default routing for general conversation
                   </p>
                 </div>
               </CardContent>
