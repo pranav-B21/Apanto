@@ -56,6 +56,7 @@ interface ChatProps {
 
 const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const { toast } = useToast();
+  const user = { firstName: 'Pranav' };
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -157,11 +158,6 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
 
       setMessages(prev => [...prev, aiMessage]);
       
-      toast({
-        title: "Response Generated",
-        description: `Used ${response.model_used}${response.is_local ? ' (Local)' : ''} for ${response.task_type} task`,
-      });
-
     } catch (error) {
       console.error('Failed to send message:', error);
       toast({
@@ -285,7 +281,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center space-x-2">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-blue-600">
                 Apanto
               </h1>
             </Link>
@@ -294,7 +290,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
             </Button>
           </div>
 
-          <Button className="w-full mb-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+          <Button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white">
             <MessageSquare className="h-4 w-4 mr-2" />
             New Chat
           </Button>
@@ -362,7 +358,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
               </Badge>
               <Button 
                 variant="outline" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none hover:from-purple-700 hover:to-blue-700 hover:text-white"
+                className="bg-blue-600 text-white border-none hover:bg-blue-700"
                 onClick={() => setShowHostForm(!showHostForm)}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -513,33 +509,31 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                 key={message.id}
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
               >
-                <div className={`flex space-x-3 max-w-3xl ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <div className={`flex items-center space-x-3 max-w-3xl ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   <Avatar className="h-8 w-8">
                     {message.isUser ? (
-                      <AvatarFallback className="bg-purple-500 text-white">U</AvatarFallback>
+                      <AvatarFallback className="bg-purple-500 text-white">{user.firstName.charAt(0)}</AvatarFallback>
                     ) : (
-                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">AI</AvatarFallback>
+                      <AvatarFallback className="bg-blue-600 text-white">{message.model?.charAt(0) || 'A'}</AvatarFallback>
                     )}
                   </Avatar>
                   <div className={`rounded-2xl p-4 ${
                     message.isUser 
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
+                      ? 'bg-muted text-foreground' 
                       : 'bg-card text-foreground border border-border'
                   }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {!message.isUser && (
-                        <>
-                          <span className="text-sm font-medium">
-                            {message.model}
-                            {message.isLocal && (
-                              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                                Local
-                              </span>
-                            )}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    {!message.isUser && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium">
+                          {message.model}
+                          {message.isLocal && (
+                            <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                              Local
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     {!message.isUser && (
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
@@ -563,14 +557,14 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
               <div className="flex justify-start animate-fade-in">
                 <div className="flex space-x-3 max-w-3xl">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">AI</AvatarFallback>
+                    <AvatarFallback className="bg-blue-500 text-white">AI</AvatarFallback>
                   </Avatar>
                   <div className="rounded-2xl p-4 bg-card text-foreground border border-border">
                     <div className="flex items-center space-x-2">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       </div>
                       <span className="text-sm text-gray-600">Analyzing and routing...</span>
                     </div>
@@ -607,7 +601,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                 <Button
                   onClick={applyImprovedPrompt}
                   size="sm"
-                  className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none hover:from-yellow-600 hover:to-orange-600"
+                  className="bg-blue-600 text-white border-none hover:bg-blue-700"
                 >
                   Use this Prompt
                 </Button>
@@ -639,7 +633,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                   disabled={!currentMessage.trim() || isLoading || isImprovingPrompt}
                   variant="outline"
                   size="sm"
-                  className="h-8 px-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white border-none"
+                  className="h-8 px-2 bg-yellow-500 hover:bg-yellow-600 text-white border-none"
                   title="Improve Prompt"
                 >
                   {isImprovingPrompt ? (
@@ -651,7 +645,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
                 <Button
                   onClick={handleSendMessage}
                   disabled={!currentMessage.trim() || isLoading || isImprovingPrompt}
-                  className="h-8 w-8 p-0 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
