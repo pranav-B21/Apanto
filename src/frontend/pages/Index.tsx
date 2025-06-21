@@ -120,7 +120,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-blue-600">
                   Apanto
                 </h1>
               </Link>
@@ -139,7 +139,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
               <Button variant="outline" className="mr-2">
                 Sign In
               </Button>
-              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 Get Started
               </Button>
             </div>
@@ -165,7 +165,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
               <Link to="/chat">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-3 group"
+                  className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3 group text-white"
                 >
                   Start Chatting
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
