@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any, Optional
@@ -8,13 +8,15 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig, AutoModelForCausa
 import torch
 import requests
 import json
+import asyncio
+from datetime import datetime
 
 # Import our existing modules
 from infer import run_prompt_on_llm
 from scorer import load_models, select_best_model
 from analyzer import classify_prompt
 from database import load_models_from_database, db_manager
-from hf_integration import HuggingFaceHostingService
+from hf_integration import HuggingFaceHostingService, set_progress_callback
 from prompt_improver import PromptImprover
 
 # Load environment variables
@@ -27,6 +29,31 @@ hf_service = HuggingFaceHostingService(db_manager)
 
 # Initialize prompt improver
 prompt_improver = PromptImprover()
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                # Remove disconnected clients
+                self.active_connections.remove(connection)
+
+manager = ConnectionManager()
 
 # Configure CORS
 app.add_middleware(
@@ -48,6 +75,8 @@ app.add_middleware(
 
 # Pydantic models for request/response
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     prompt: str
     priority: str = "accuracy"  # accuracy, speed, cost
     session_id: Optional[str] = None
@@ -80,6 +109,8 @@ class EnhancementSuggestion(BaseModel):
     confidence: int
 
 class HostModelRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_url: str
     custom_name: Optional[str] = None
 
@@ -88,6 +119,8 @@ class ImprovePromptRequest(BaseModel):
     include_suggestions: bool = False
 
 class ImprovePromptResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     success: bool
     original_prompt: str
     improved_prompt: str
@@ -146,6 +179,17 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "Backend is operational"}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Echo back for testing
+            await manager.send_personal_message(f"Message received: {data}", websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.get("/models")
 async def get_available_models():
@@ -389,7 +433,11 @@ async def get_model_analytics():
 @app.post("/host-model")
 async def host_model(request: HostModelRequest):
     """Host a new Hugging Face model"""
+    print("🎯 /host-model endpoint called")
+    print(f"📥 Request data: model_url={request.model_url}, custom_name={request.custom_name}")
+    
     try:
+        print("🔄 Starting model registration process...")
         # Use the HuggingFaceHostingService to register the model
         result = hf_service.register_model(
             user_id="system",  # You might want to get this from authentication
@@ -397,7 +445,10 @@ async def host_model(request: HostModelRequest):
             custom_name=request.custom_name
         )
         
+        print(f"✅ Model registration completed: {result}")
+        
         if not result['success']:
+            print(f"❌ Model registration failed: {result.get('error', 'Unknown error')}")
             raise HTTPException(
                 status_code=400,
                 detail=result.get('error', 'Failed to register model')
@@ -408,7 +459,7 @@ async def host_model(request: HostModelRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Unexpected error in host-model endpoint:")
+        print(f"💥 Unexpected error in host-model endpoint:")
         print(f"Error type: {type(e).__name__}")
         print(f"Error message: {str(e)}")
         import traceback
@@ -470,6 +521,18 @@ async def improve_prompt_endpoint(request: ImprovePromptRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+async def broadcast_model_progress(progress: Dict[str, Any]):
+    """Broadcast model loading progress to all connected clients"""
+    message = json.dumps({
+        "type": "model_progress",
+        "data": progress,
+        "timestamp": datetime.now().isoformat()
+    })
+    await manager.broadcast(message)
+
+# Set up progress callback for model loading
+set_progress_callback(broadcast_model_progress)
 
 if __name__ == "__main__":
     import uvicorn

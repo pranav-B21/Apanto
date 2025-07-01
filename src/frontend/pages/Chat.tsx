@@ -34,6 +34,7 @@ import {
 import { apiService, type ChatRequest, type ChatResponse, type Enhancement, type ModelInfo, type ImprovePromptRequest, type ImprovePromptResponse } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import DarkModeToggle from "@/components/DarkModeToggle";
+import ModelLoadingBar from "@/components/ModelLoadingBar";
 
 interface Message {
   id: string;
@@ -83,6 +84,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [improvedPromptSuggestion, setImprovedPromptSuggestion] = useState<string | null>(null);
+  const [showModelLoading, setShowModelLoading] = useState(false);
 
   const conversations = [
     { id: '1', title: 'AI Model Routing', timestamp: '2 minutes ago', active: true },
@@ -241,6 +243,9 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
     if (!modelUrl.trim()) return;
     
     try {
+      // Show loading bar
+      setShowModelLoading(true);
+      
       const response = await apiService.hostModel(modelUrl, customName);
       
       if (!response.success) {
@@ -268,6 +273,11 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
         description: error instanceof Error ? error.message : "Failed to host model",
         variant: "destructive",
       });
+    } finally {
+      // Hide loading bar after a delay to show completion
+      setTimeout(() => {
+        setShowModelLoading(false);
+      }, 2000);
     }
   };
 
@@ -654,6 +664,12 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
           </div>
         </div>
       </div>
+
+      {/* Model Loading Bar */}
+      <ModelLoadingBar 
+        isVisible={showModelLoading} 
+        onClose={() => setShowModelLoading(false)} 
+      />
     </div>
   );
 };
