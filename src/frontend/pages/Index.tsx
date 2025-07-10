@@ -27,32 +27,26 @@ interface IndexProps {
 const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
   const features = [
     {
-      icon: Target,
       title: "Smart Model Routing",
       description: "Auto-selects the best AI model for your specific task type and requirements"
     },
     {
-      icon: Zap,
       title: "Real-time Prompt Enhancement",
       description: "Get instant suggestions to improve your prompts for better results"
     },
     {
-      icon: Globe,
       title: "Multi-Provider Support",
       description: "Access OpenAI, Anthropic, Groq, and more - all in one unified interface"
     },
     {
-      icon: BarChart3,
       title: "Performance Tracking",
       description: "See which models work best for your use cases with detailed analytics"
     },
     {
-      icon: Code,
       title: "No-Code Integration",
       description: "Just chat naturally - we handle all the technical complexity behind the scenes"
     },
     {
-      icon: DollarSign,
       title: "Cost Optimization",
       description: "Use expensive models only when needed, save money with smart routing"
     }
@@ -269,7 +263,7 @@ const Index: React.FC<IndexProps> = ({ darkMode, toggleDarkMode }) => {
               >
                 <CardHeader>
                   <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <feature.icon className="h-6 w-6 text-white" />
+                    <Zap className="h-6 w-6 text-white" />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
