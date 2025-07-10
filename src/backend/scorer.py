@@ -27,7 +27,7 @@ def get_live_groq_model_ids():
 def load_models():
     """
     Load models from Supabase database, then filter out any decommissioned models
-    by checking against Groq's live model list. Only return models that pass a basic inference test.
+    by checking against Groq's live model list. Only return models that pass a basic inference test, except local HuggingFace models which are always included.
     """
     # Load models from database instead of models.json
     all_models = load_models_from_database()
@@ -45,8 +45,16 @@ def load_models():
 
     print(f"✅ Loaded {len(all_models)} active models from database")
 
-    # Filter models by inference test
-    filtered_models = run_inference_tests_sync(all_models)
+    # Separate local (HuggingFace) and non-local models
+    local_models = [m for m in all_models if m.get('is_huggingface')]
+    remote_models = [m for m in all_models if not m.get('is_huggingface')]
+
+    # Filter only remote models by inference test
+    filtered_remote_models = run_inference_tests_sync(remote_models)
+
+    # Always include local models
+    filtered_models = filtered_remote_models + local_models
+    print(f"Returning {len(filtered_models)} models: {len(filtered_remote_models)} remote (tested), {len(local_models)} local (untested)")
     return filtered_models
 
 def score_model(model: dict, category: str, priority: str) -> float:
