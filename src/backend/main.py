@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any, Optional
@@ -8,14 +8,18 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig, AutoModelForCausa
 import torch
 import requests
 import json
+import asyncio
+from datetime import datetime
+import traceback
 
 # Import our existing modules
-from infer import run_prompt_on_llm
+from infer import run_prompt_on_llm, run_prompt_with_context, get_available_providers, get_models_by_provider, estimate_cost
 from scorer import load_models, select_best_model
 from analyzer import classify_prompt
 from database import load_models_from_database, db_manager
-from hf_integration import HuggingFaceHostingService
+from hf_integration import HuggingFaceHostingService, set_progress_callback
 from prompt_improver import PromptImprover
+from multi_provider import multi_provider_llm
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +31,31 @@ hf_service = HuggingFaceHostingService(db_manager)
 
 # Initialize prompt improver
 prompt_improver = PromptImprover()
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                # Remove disconnected clients
+                self.active_connections.remove(connection)
+
+manager = ConnectionManager()
 
 # Configure CORS
 app.add_middleware(
@@ -48,6 +77,8 @@ app.add_middleware(
 
 # Pydantic models for request/response
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     prompt: str
     priority: str = "accuracy"  # accuracy, speed, cost
     session_id: Optional[str] = None
@@ -80,6 +111,8 @@ class EnhancementSuggestion(BaseModel):
     confidence: int
 
 class HostModelRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_url: str
     custom_name: Optional[str] = None
 
@@ -88,6 +121,8 @@ class ImprovePromptRequest(BaseModel):
     include_suggestions: bool = False
 
 class ImprovePromptResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     success: bool
     original_prompt: str
     improved_prompt: str
@@ -147,6 +182,17 @@ async def root():
 async def health_check():
     return {"status": "healthy", "message": "Backend is operational"}
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Echo back for testing
+            await manager.send_personal_message(f"Message received: {data}", websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
 @app.get("/models")
 async def get_available_models():
     """Get all available models from the database"""
@@ -157,7 +203,8 @@ async def get_available_models():
                 {
                     "name": model["name"],
                     "model_id": model["model_id"],
-                    "scores": model.get("scores", {})
+                    "scores": model.get("scores", {}),
+                    "provider": multi_provider_llm.get_provider_from_model_id(model["model_id"]) if not model.get("is_huggingface") else "huggingface"
                 }
                 for model in models
             ],
@@ -165,6 +212,38 @@ async def get_available_models():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load models: {str(e)}")
+
+@app.get("/providers")
+async def get_providers():
+    """Get all available AI providers and their models"""
+    try:
+        providers = get_available_providers()
+        provider_models = {}
+        
+        for provider in providers:
+            models = get_models_by_provider(provider)
+            provider_models[provider] = models
+        
+        return {
+            "providers": providers,
+            "models_by_provider": provider_models,
+            "total_providers": len(providers)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get providers: {str(e)}")
+
+@app.get("/providers/{provider}/models")
+async def get_provider_models(provider: str):
+    """Get available models for a specific provider"""
+    try:
+        models = get_models_by_provider(provider)
+        return {
+            "provider": provider,
+            "models": models,
+            "count": len(models)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get models for provider {provider}: {str(e)}")
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -222,20 +301,15 @@ async def chat_endpoint(request: ChatRequest):
                 ai_response = result.get("output", "[No response generated]")
                 is_local = True
             else:
-                # If your LLM supports chat history, pass context_messages instead of just prompt
-                # For now, join messages for simple LLMs
-                if hasattr(selected_model, 'supports_chat') and selected_model.supports_chat:
-                    ai_response = run_prompt_on_llm(
-                        selected_model["model_id"],
-                        context_messages
-                    )
-                else:
-                    # Fallback: concatenate context for plain LLMs
-                    prompt_with_context = "\n".join([m["content"] for m in context_messages])
-                    ai_response = run_prompt_on_llm(
-                        selected_model["model_id"],
-                        prompt_with_context
-                    )
+                # Use the new multi-provider system
+                provider = multi_provider_llm.get_provider_from_model_id(selected_model["model_id"])
+                print(f"🎯 Using provider: {provider} for model: {selected_model['model_id']}")
+                
+                # Use context messages for better conversation handling
+                ai_response = await run_prompt_with_context(
+                    selected_model["model_id"],
+                    context_messages
+                )
                 is_local = False
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"LLM inference failed: {str(e)}")
@@ -247,8 +321,11 @@ async def chat_endpoint(request: ChatRequest):
         # Estimate tokens (rough approximation)
         tokens_used = len(request.prompt.split()) + len(ai_response.split())
         
-        # Estimate cost (rough approximation based on model)
-        estimated_cost = tokens_used * 0.0001  # $0.0001 per token as baseline
+        # Estimate cost using the new multi-provider system
+        if selected_model.get("is_huggingface"):
+            estimated_cost = 0.0  # Local models are free
+        else:
+            estimated_cost = estimate_cost(selected_model["model_id"], tokens_used)
         
         # Get confidence from model selection (or default)
         confidence = 85.0  # You could enhance this based on model scoring
@@ -389,7 +466,11 @@ async def get_model_analytics():
 @app.post("/host-model")
 async def host_model(request: HostModelRequest):
     """Host a new Hugging Face model"""
+    print("🎯 /host-model endpoint called")
+    print(f"📥 Request data: model_url={request.model_url}, custom_name={request.custom_name}")
+    
     try:
+        print("🔄 Starting model registration process...")
         # Use the HuggingFaceHostingService to register the model
         result = hf_service.register_model(
             user_id="system",  # You might want to get this from authentication
@@ -397,7 +478,10 @@ async def host_model(request: HostModelRequest):
             custom_name=request.custom_name
         )
         
+        print(f"✅ Model registration completed: {result}")
+        
         if not result['success']:
+            print(f"❌ Model registration failed: {result.get('error', 'Unknown error')}")
             raise HTTPException(
                 status_code=400,
                 detail=result.get('error', 'Failed to register model')
@@ -408,7 +492,7 @@ async def host_model(request: HostModelRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Unexpected error in host-model endpoint:")
+        print(f"💥 Unexpected error in host-model endpoint:")
         print(f"Error type: {type(e).__name__}")
         print(f"Error message: {str(e)}")
         import traceback
@@ -424,7 +508,7 @@ async def improve_prompt_endpoint(request: ImprovePromptRequest):
             raise HTTPException(status_code=400, detail="Prompt cannot be empty")
         
         # Improve the prompt
-        result = prompt_improver.improve_prompt(request.prompt)
+        result = await prompt_improver.improve_prompt(request.prompt)
         
         if not result["success"]:
             raise HTTPException(status_code=500, detail=f"Failed to improve prompt: {result.get('error', 'Unknown error')}")
@@ -433,7 +517,7 @@ async def improve_prompt_endpoint(request: ImprovePromptRequest):
         suggestions_list = None
         suggestions_data = None
         if request.include_suggestions:
-            suggestions_result = prompt_improver.get_improvement_suggestions(request.prompt)
+            suggestions_result = await prompt_improver.get_improvement_suggestions(request.prompt)
             if suggestions_result["success"]:
                 suggestions_data = suggestions_result
                 # Process suggestions into a list of strings to be safe
@@ -469,7 +553,21 @@ async def improve_prompt_endpoint(request: ImprovePromptRequest):
     except HTTPException:
         raise
     except Exception as e:
+        print("💥 LLM inference error:")
+        print(str(e))
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+async def broadcast_model_progress(progress: Dict[str, Any]):
+    """Broadcast model loading progress to all connected clients"""
+    message = json.dumps({
+        "type": "model_progress",
+        "data": progress,
+        "timestamp": datetime.now().isoformat()
+    })
+    await manager.broadcast(message)
+
+# Set up progress callback for model loading
+set_progress_callback(broadcast_model_progress)
 
 if __name__ == "__main__":
     import uvicorn

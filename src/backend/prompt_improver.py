@@ -3,20 +3,18 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+from multi_provider import multi_provider_llm
 
 load_dotenv()
 
 class PromptImprover:
     def __init__(self):
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
-        self.groq_base_url = "https://api.groq.com/openai/v1"
-        
-        if not self.groq_api_key:
-            raise ValueError("GROQ_API_KEY environment variable is required")
+        # Use the multi-provider system instead of just Groq
+        self.multi_provider = multi_provider_llm
     
-    def improve_prompt(self, original_prompt: str) -> Dict[str, Any]:
+    async def improve_prompt(self, original_prompt: str) -> Dict[str, Any]:
         """
-        Improve a prompt using Groq API with Llama model
+        Improve a prompt using the multi-provider system
         """
         try:
             # Create the system prompt for prompt improvement
@@ -42,35 +40,34 @@ Return your response as a JSON object with these fields:
 
 Focus on making the prompt more effective while preserving the user's original intent."""
 
-            # Prepare the request to Groq API
-            headers = {
-                "Authorization": f"Bearer {self.groq_api_key}",
-                "Content-Type": "application/json"
-            }
+            # Use the multi-provider system with GPT-4 for better prompt improvement
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Please improve this prompt:\n\n{original_prompt}"}
+            ]
             
-            payload = {
-                "model": "llama3-70b-8192",  # Using Llama model as requested
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Please improve this prompt:\n\n{original_prompt}"}
-                ],
-                "temperature": 0.3,  # Lower temperature for more consistent results
-                "max_tokens": 1000
-            }
+            # Try GPT-4 first, fallback to other models
+            model_options = ["gpt-4o", "gpt-4o-mini", "llama3-70b-8192"]
             
-            # Make the API call
-            response = requests.post(
-                f"{self.groq_base_url}/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Groq API error: {response.status_code} - {response.text}")
-            
-            result = response.json()
-            ai_response = result["choices"][0]["message"]["content"]
+            for model_id in model_options:
+                try:
+                    result = await self.multi_provider.generate_text(
+                        model_id=model_id,
+                        messages=messages,
+                        parameters={"temperature": 0.3, "max_tokens": 1000}
+                    )
+                    
+                    if result["success"]:
+                        ai_response = result["output"]
+                        break
+                    else:
+                        print(f"Failed with {model_id}: {result.get('error', 'Unknown error')}")
+                        continue
+                except Exception as e:
+                    print(f"Error with {model_id}: {str(e)}")
+                    continue
+            else:
+                raise Exception("All model options failed")
             
             # Try to parse the JSON response
             try:
@@ -121,9 +118,9 @@ Focus on making the prompt more effective while preserving the user's original i
                 "tokens_used": 0
             }
     
-    def get_improvement_suggestions(self, original_prompt: str) -> Dict[str, Any]:
+    async def get_improvement_suggestions(self, original_prompt: str) -> Dict[str, Any]:
         """
-        Get specific suggestions for improving a prompt
+        Get specific suggestions for improving a prompt using the multi-provider system
         """
         try:
             system_prompt = """You are a prompt engineering expert. Analyze the given prompt and provide specific, actionable suggestions for improvement.
@@ -140,33 +137,34 @@ Return your response as a JSON object with:
 - "priority": "high", "medium", or "low" based on how much the prompt needs improvement
 - "estimated_impact": Brief description of how these improvements would help"""
 
-            headers = {
-                "Authorization": f"Bearer {self.groq_api_key}",
-                "Content-Type": "application/json"
-            }
+            # Use the multi-provider system
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Analyze this prompt and provide improvement suggestions:\n\n{original_prompt}"}
+            ]
             
-            payload = {
-                "model": "llama3-70b-8192",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Analyze this prompt and provide improvement suggestions:\n\n{original_prompt}"}
-                ],
-                "temperature": 0.2,
-                "max_tokens": 800
-            }
+            # Try different models for suggestions
+            model_options = ["gpt-4o-mini", "llama3-70b-8192", "claude-3-5-haiku-20241022"]
             
-            response = requests.post(
-                f"{self.groq_base_url}/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Groq API error: {response.status_code}")
-            
-            result = response.json()
-            ai_response = result["choices"][0]["message"]["content"]
+            for model_id in model_options:
+                try:
+                    result = await self.multi_provider.generate_text(
+                        model_id=model_id,
+                        messages=messages,
+                        parameters={"temperature": 0.2, "max_tokens": 800}
+                    )
+                    
+                    if result["success"]:
+                        ai_response = result["output"]
+                        break
+                    else:
+                        print(f"Failed with {model_id}: {result.get('error', 'Unknown error')}")
+                        continue
+                except Exception as e:
+                    print(f"Error with {model_id}: {str(e)}")
+                    continue
+            else:
+                raise Exception("All model options failed")
             
             # Try to parse JSON response
             try:

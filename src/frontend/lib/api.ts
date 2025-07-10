@@ -30,6 +30,19 @@ export interface ModelInfo {
   model_id: string;
   scores: Record<string, Record<string, number>>;
   is_local?: boolean;
+  provider?: string;
+}
+
+export interface ProviderInfo {
+  provider: string;
+  models: string[];
+  count: number;
+}
+
+export interface ProvidersResponse {
+  providers: string[];
+  models_by_provider: Record<string, string[]>;
+  total_providers: number;
 }
 
 export interface ImprovePromptRequest {
@@ -111,6 +124,14 @@ class ApiService {
 
   async getAvailableModels(): Promise<{ models: ModelInfo[]; count: number }> {
     return this.request<{ models: ModelInfo[]; count: number }>('/models');
+  }
+
+  async getProviders(): Promise<ProvidersResponse> {
+    return this.request<ProvidersResponse>('/providers');
+  }
+
+  async getProviderModels(provider: string): Promise<ProviderInfo> {
+    return this.request<ProviderInfo>(`/providers/${provider}/models`);
   }
 
   async getAnalytics(): Promise<any> {
