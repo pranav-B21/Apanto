@@ -4,6 +4,7 @@ import requests
 import random
 from dotenv import load_dotenv
 from database import load_models_from_database
+from infer import run_inference_tests_sync
 # Load environment variables from .env
 load_dotenv()
 
@@ -26,7 +27,7 @@ def get_live_groq_model_ids():
 def load_models():
     """
     Load models from Supabase database, then filter out any decommissioned models
-    by checking against Groq's live model list.
+    by checking against Groq's live model list. Only return models that pass a basic inference test.
     """
     # Load models from database instead of models.json
     all_models = load_models_from_database()
@@ -41,16 +42,12 @@ def load_models():
         # If Groq API is not available, return all models from database
         print(f"✅ Loaded {len(all_models)} models from database (no Groq filtering)")
         return all_models
-    
-    # Filter: include models in Groq list OR is_huggingface is True
-    filtered = [m for m in all_models if (m["model_id"] in live_model_ids) or m.get("is_huggingface")]
 
-    dead = [m for m in all_models if m not in filtered]
-    for m in dead:
-        print(f"🪦 Skipping decommissioned model: {m['name']} ({m['model_id']})")
+    print(f"✅ Loaded {len(all_models)} active models from database")
 
-    print(f"✅ Loaded {len(filtered)} active models from database")
-    return filtered
+    # Filter models by inference test
+    filtered_models = run_inference_tests_sync(all_models)
+    return filtered_models
 
 def score_model(model: dict, category: str, priority: str) -> float:
     """
