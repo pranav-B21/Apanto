@@ -21,7 +21,7 @@ def get_live_groq_model_ids():
         model_list = resp.json()["data"]
         return {m["id"] for m in model_list}
     except Exception as e:
-        print("⚠️ Failed to fetch model list from Groq:", e)
+        print("Failed to fetch model list from Groq:", e)
         return set()
 
 def load_models():
@@ -33,17 +33,17 @@ def load_models():
     all_models = load_models_from_database()
     
     if not all_models:
-        print("⚠️ No models loaded from database!")
+        print("No models loaded from database!")
         return []
 
     live_model_ids = get_live_groq_model_ids()
     
     if live_model_ids is None:
         # If Groq API is not available, return all models from database
-        print(f"✅ Loaded {len(all_models)} models from database (no Groq filtering)")
+        print(f"Loaded {len(all_models)} models from database (no Groq filtering)")
         return all_models
 
-    print(f"✅ Loaded {len(all_models)} active models from database")
+    print(f"Loaded {len(all_models)} active models from database")
 
     # Separate local (HuggingFace) and non-local models
     local_models = [m for m in all_models if m.get('is_huggingface')]
