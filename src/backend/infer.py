@@ -1,7 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
-from multi_provider import multi_provider_llm
+from .multi_provider import multi_provider_llm
 import traceback
 import asyncio
 

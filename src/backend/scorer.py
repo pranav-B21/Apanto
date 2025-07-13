@@ -3,8 +3,8 @@ import os
 import requests
 import random
 from dotenv import load_dotenv
-from database import load_models_from_database
-from infer import run_inference_tests_sync
+from .database import load_models_from_database
+from .infer import run_inference_tests_sync
 # Load environment variables from .env
 load_dotenv()
 

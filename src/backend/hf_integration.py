@@ -16,7 +16,7 @@ from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, AutoModel
 import torch
-from templates import get_template, get_expected_format
+from .templates import get_template, get_expected_format
 import asyncio
 
 load_dotenv()

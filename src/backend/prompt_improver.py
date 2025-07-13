@@ -3,7 +3,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
-from multi_provider import multi_provider_llm
+from .multi_provider import multi_provider_llm
 
 load_dotenv()
 
