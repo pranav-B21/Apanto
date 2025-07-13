@@ -1,5 +1,5 @@
 import sys
-from database import db_manager
+from .database import db_manager
 
 """
 This script is used to view and interact with the database.

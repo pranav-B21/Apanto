@@ -13,13 +13,13 @@ from datetime import datetime
 import traceback
 
 # Import our existing modules
-from infer import run_prompt_on_llm, run_prompt_with_context, get_available_providers, get_models_by_provider, estimate_cost
-from scorer import load_models, select_best_model
-from analyzer import classify_prompt
-from database import load_models_from_database, db_manager
-from hf_integration import HuggingFaceHostingService, set_progress_callback
-from prompt_improver import PromptImprover
-from multi_provider import multi_provider_llm
+from .infer import run_prompt_on_llm, run_prompt_with_context, get_available_providers, get_models_by_provider, estimate_cost
+from .scorer import load_models, select_best_model
+from .analyzer import classify_prompt
+from .database import load_models_from_database, db_manager
+from .hf_integration import HuggingFaceHostingService, set_progress_callback
+from .prompt_improver import PromptImprover
+from .multi_provider import multi_provider_llm
 
 # Load environment variables
 load_dotenv()
