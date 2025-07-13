@@ -68,7 +68,12 @@ app.add_middleware(
         "http://127.0.0.1:5174",  # IPv4 localhost backup
         "http://localhost:8081",  # Backup port 1
         "http://localhost:8082",  # Backup port 2
-        "http://localhost:4173"   # Vite preview port
+        "http://localhost:4173",  # Vite preview port
+        "https://apanto.onrender.com",  # Deployed backend
+        "https://apanto-frontend.onrender.com",  # Deployed frontend (if you deploy it)
+        "https://apanto.vercel.app",  # Vercel deployment
+        "https://apanto.netlify.app",  # Netlify deployment
+        "*"  # Allow all origins for development (remove in production)
     ],
     allow_credentials=True,
     allow_methods=["*"],
