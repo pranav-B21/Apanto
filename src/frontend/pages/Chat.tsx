@@ -87,9 +87,7 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const [showModelLoading, setShowModelLoading] = useState(false);
 
   const conversations = [
-    { id: '1', title: 'AI Model Routing', timestamp: '2 minutes ago', active: true },
-    { id: '2', title: 'Code Generation Help', timestamp: '1 hour ago', active: false },
-    { id: '3', title: 'Writing Assistant', timestamp: 'Yesterday', active: false },
+    { id: '1', title: 'New Chat', timestamp: '', active: true }
   ];
 
   useEffect(() => {
@@ -304,24 +302,6 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
             <MessageSquare className="h-4 w-4 mr-2" />
             New Chat
           </Button>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Conversations</h3>
-            {conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  conv.active ? 'bg-blue-100 border border-blue-200 dark:bg-blue-900/40 dark:border-blue-700' : 'hover:bg-muted dark:hover:bg-muted/40'
-                }`}
-              >
-                <div className="font-medium text-sm text-foreground truncate">{conv.title}</div>
-                <div className="text-xs text-muted-foreground flex items-center mt-1">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {conv.timestamp}
-                </div>
-              </div>
-            ))}
-          </div>
 
           {/* Model Selection */}
           <div className="p-4 border-t border-border">
