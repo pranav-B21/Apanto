@@ -142,6 +142,7 @@ class ImprovePromptResponse(BaseModel):
 
 # Global variables to cache models
 cached_models = None
+models_loading = False
 
 # --- LLM Memory Store ---
 from threading import Lock
@@ -174,9 +175,15 @@ session_memory = SessionMemory(max_turns=8)
 
 def get_models():
     """Get cached models or load them if not cached"""
-    global cached_models
+    global cached_models, models_loading
     if cached_models is None:
-        cached_models = load_models()
+        models_loading = True
+        try:
+            print("🔄 Loading models...")
+            cached_models = load_models()
+            print("✅ Models loaded successfully")
+        finally:
+            models_loading = False
     return cached_models
 
 @app.get("/")
@@ -197,6 +204,28 @@ async def websocket_endpoint(websocket: WebSocket):
             await manager.send_personal_message(f"Message received: {data}", websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+@app.get("/models/loading")
+async def get_models_loading_status():
+    global models_loading
+    return {"loading": models_loading}
+
+@app.post("/models/reload")
+async def reload_models():
+    """Force reload of models (clears cache and reloads)"""
+    global cached_models, models_loading
+    cached_models = None
+    models_loading = True
+    try:
+        print("🔄 Forcing model reload...")
+        cached_models = load_models()
+        print("✅ Models reloaded successfully")
+        return {"success": True, "message": "Models reloaded successfully"}
+    except Exception as e:
+        print(f"❌ Error reloading models: {e}")
+        return {"success": False, "error": str(e)}
+    finally:
+        models_loading = False
 
 @app.get("/models")
 async def get_available_models():

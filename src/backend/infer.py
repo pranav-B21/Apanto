@@ -68,12 +68,12 @@ async def test_model(model):
             messages=prompt,
             parameters={"temperature": 0.2, "max_tokens": 16}
         )
-        assert result.get("success"), f"Model {model_id} failed: {result.get('error')}"
-        assert result.get("output"), f"Model {model_id} returned empty output"
-        print(f"Model {model_id} passed inference test.")
+        if not result.get("success"):
+            return False
+        if not result.get("output"):
+            return False
         return True
     except Exception as e:
-        print(f"Model {model_id} failed inference test: {e}")
         return False
 
 async def filter_models_by_inference_test(models):
@@ -84,10 +84,12 @@ async def filter_models_by_inference_test(models):
 
 def run_inference_tests_sync(models):
     """Run inference tests synchronously (for use in non-async contexts)"""
+    if not models:
+        return []
+    
     try:
         # Try to run in a new event loop
         filtered_models = asyncio.run(filter_models_by_inference_test(models))
-        print(f"{len(filtered_models)}/{len(models)} models passed inference test.")
         return filtered_models
     except RuntimeError:
         # If already in an event loop (e.g. in FastAPI), try a different approach
@@ -104,12 +106,10 @@ def run_inference_tests_sync(models):
             
             # Run the async function
             filtered_models = loop.run_until_complete(filter_models_by_inference_test(models))
-            print(f"{len(filtered_models)}/{len(models)} models passed inference test.")
             return filtered_models
             
         except Exception as e:
-            print(f"Error running inference tests: {e}")
-            print("Falling back to return all models without testing")
+            print(f"❌ Error running inference tests: {e}")
             return models
 
 async def run_inference_tests_async(models):

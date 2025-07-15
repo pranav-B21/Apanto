@@ -36,25 +36,50 @@ def load_models():
         print("No models loaded from database!")
         return []
 
+    print(f"\n📋 Loaded {len(all_models)} models from database:")
+    for model in all_models:
+        print(f"  - {model['name']} ({model['model_id']}) - HF: {model.get('is_huggingface', False)}")
+
     live_model_ids = get_live_groq_model_ids()
     
     if live_model_ids is None:
         # If Groq API is not available, return all models from database
-        print(f"Loaded {len(all_models)} models from database (no Groq filtering)")
+        print(f"⚠️ Groq API not available, returning all models from database")
         return all_models
 
-    print(f"Loaded {len(all_models)} active models from database")
+    print(f"✅ Groq API available, proceeding with model filtering")
 
     # Separate local (HuggingFace) and non-local models
     local_models = [m for m in all_models if m.get('is_huggingface')]
     remote_models = [m for m in all_models if not m.get('is_huggingface')]
 
+    print(f"\n🔍 Model Separation:")
+    print(f"  📦 Local (HuggingFace) models: {len(local_models)}")
+    print(f"  🌐 Remote models: {len(remote_models)}")
+    
+    if remote_models:
+        print(f"  🌐 Remote models to test: {[m['model_id'] for m in remote_models]}")
+
     # Filter only remote models by inference test
+    print(f"\n🧪 Testing {len(remote_models)} remote models...")
     filtered_remote_models = run_inference_tests_sync(remote_models)
 
     # Always include local models
     filtered_models = filtered_remote_models + local_models
-    print(f"Returning {len(filtered_models)} models: {len(filtered_remote_models)} remote (tested), {len(local_models)} local (untested)")
+    
+    # Calculate working vs non-working models
+    working_remote = len(filtered_remote_models)
+    failed_remote = len(remote_models) - working_remote
+    working_local = len(local_models)
+    total_working = working_remote + working_local
+    
+    print(f"\n📊 Model Test Results:")
+    print(f"  ✅ Working models: {total_working}")
+    print(f"    - Remote: {working_remote}")
+    print(f"    - Local: {working_local}")
+    print(f"  ❌ Failed models: {failed_remote}")
+    print(f"  📋 Total available: {total_working}")
+    
     return filtered_models
 
 def score_model(model: dict, category: str, priority: str) -> float:

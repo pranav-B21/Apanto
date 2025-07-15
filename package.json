@@ -11,7 +11,7 @@
     "cleanup": "lsof -ti:8000 | xargs kill -9 2>/dev/null || true; lsof -ti:5173 | xargs kill -9 2>/dev/null || true",
     "check-python-deps": "python3 -c 'import fastapi, uvicorn, pydantic, requests, dotenv, psycopg2' 2>/dev/null || npm run install:python",
     "install:python": "pip3 install -r requirements.txt",
-    "backend": "cd src/backend && arch -arm64 python3 -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+    "backend": "arch -arm64 python3 -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000 --app-dir src",
     "frontend:wait": "npm run wait-for-backend && npm run dev",
     "wait-for-backend": "node -e \"const http=require('http');let attempts=0;const check=()=>{http.get('http://localhost:8000/health',res=>{console.log('✅ Backend ready!');process.exit(0)}).on('error',()=>{attempts++;if(attempts<30){setTimeout(check,1000)}else{console.error('❌ Backend failed to start');process.exit(1)}})};check()\"",
     "start": "npm run dev:full",

@@ -95,7 +95,7 @@ class MultiProviderLLM:
     ) -> Dict[str, Any]:
         """Generate text using the appropriate provider"""
 
-        print("is it even entering this function?")
+
         
         # Handle string input (legacy support)
         if isinstance(messages, str):
@@ -119,7 +119,6 @@ class MultiProviderLLM:
             elif provider == "deepseek":
                 return await self.call_deepseek(model_id, formatted_messages, default_params)
             elif provider == "gemini":
-                print("calling gemini")
                 return await self.call_gemini(model_id, formatted_messages, default_params)
                 
             elif provider == "anthropic":
@@ -216,7 +215,6 @@ class MultiProviderLLM:
             }
     
     async def call_gemini(self, model_id: str, messages: List[Dict[str, str]], params: Dict[str, Any]) -> Dict[str, Any]:
-        print("model id:", model_id)
         if not self.gemini_client:
             raise ValueError("Gemini API key not configured")
         try:
@@ -239,7 +237,6 @@ class MultiProviderLLM:
                 "usage": {}  # Gemini doesn't provide detailed usage
             }
         except Exception as e:
-            print(f"Exception in call_gemini: {e}")
             return {
                 "success": False,
                 "error": f"Gemini API error: {str(e)}",
