@@ -283,118 +283,123 @@ const Chat: React.FC<ChatProps> = ({ darkMode, toggleDarkMode }) => {
   const lastAiMessage = [...messages].reverse().find(m => !m.isUser);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
-      {/* Left Sidebar */}
-      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-background/80 backdrop-blur-md border-r border-border overflow-hidden`}>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-6">
-            <Link to="/" className="flex items-center space-x-2">
-              <h1 className="text-2xl font-bold text-blue-600">
-                Apanto
-              </h1>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
-              <X className="h-4 w-4" />
+    <div className="h-screen bg-background text-foreground flex overflow-hidden">
+      {/* Left Sidebar - Fixed */}
+      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-background/80 backdrop-blur-md border-r border-border flex-shrink-0 h-screen`}>
+        <div className="h-full flex flex-col">
+          {/* Apanto Logo */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-6">
+              <Link to="/" className="flex items-center space-x-2">
+                <h1 className="text-2xl font-bold text-blue-600">
+                  Apanto
+                </h1>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* New Chat Button */}
+            <Button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              New Chat
             </Button>
-          </div>
 
-          <Button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            New Chat
-          </Button>
-
-          {/* Model Selection */}
-          <div className="p-4 border-t border-border">
-            <h3 className="text-sm font-medium text-foreground mb-2">Select Model</h3>
-            <select
-              value={selectedModel || ''}
-              onChange={(e) => setSelectedModel(e.target.value || null)}
-              className="w-full p-2 border border-border rounded-md text-sm bg-background text-foreground"
-            >
-              <option value="">Auto-select (Recommended)</option>
-              {availableModels.map((model) => (
-                <option key={model.model_id} value={model.model_id}>
-                  {model.name} {model.is_local ? '(Local)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Intelligent Routing Insights Panel */}
-          {lastAiMessage && (
+            {/* Model Selection */}
             <div className="p-4 border-t border-border">
-              <Card className="bg-card/90 backdrop-blur-sm border-blue-200 dark:border-blue-700">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <CardTitle className="text-lg">Intelligent Routing</CardTitle>
+              <h3 className="text-sm font-medium text-foreground mb-2">Select Model</h3>
+              <select
+                value={selectedModel || ''}
+                onChange={(e) => setSelectedModel(e.target.value || null)}
+                className="w-full p-2 border border-border rounded-md text-sm bg-background text-foreground"
+              >
+                <option value="">Auto-select (Recommended)</option>
+                {availableModels.map((model) => (
+                  <option key={model.model_id} value={model.model_id}>
+                    {model.name} {model.is_local ? '(Local)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Intelligent Routing Panel */}
+            {lastAiMessage && (
+              <div className="mt-4">
+                <Card className="bg-card/95 backdrop-blur-md border-blue-200 dark:border-blue-700 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <CardTitle className="text-lg">Intelligent Routing</CardTitle>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
-                        <Target className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                          <Target className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Task Detected</p>
+                          <p className="font-medium text-foreground">{formatTaskType(lastAiMessage.taskType || 'General Chat')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Task Detected</p>
-                        <p className="font-medium text-foreground">{formatTaskType(lastAiMessage.taskType || 'General Chat')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-300" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground mb-2">Confidence</p>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-24 bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-green-500 dark:bg-green-400 h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${lastAiMessage.confidence}%` }}
-                            ></div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-300" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground mb-2">Confidence</p>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-24 bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-green-500 dark:bg-green-400 h-2 rounded-full transition-all duration-300" 
+                                style={{ width: `${lastAiMessage.confidence}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium text-foreground">{lastAiMessage.confidence}%</span>
                           </div>
-                          <span className="text-sm font-medium text-foreground">{lastAiMessage.confidence}%</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                          <Brain className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Selected Model</p>
+                          <p className="font-medium text-foreground">{lastAiMessage.model}</p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
-                        <Brain className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Selected Model</p>
-                        <p className="font-medium text-foreground">{lastAiMessage.model}</p>
-                      </div>
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="text-blue-600 dark:text-blue-300 font-medium">Reasoning:</span> Default routing for general conversation
+                      </p>
                     </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="text-blue-600 dark:text-blue-300 font-medium">Reasoning:</span> Default routing for general conversation
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
 
-        <div className="absolute bottom-4 left-4 right-4">
-          <Button variant="outline" className="w-full">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
+          {/* Settings button at bottom */}
+          <div className="mt-auto p-4 border-t border-border">
+            <Button variant="outline" className="w-full">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <div className="bg-background/80 backdrop-blur-md border-b border-border p-4">
+        <div className="bg-background/80 backdrop-blur-md border-b border-border p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {!sidebarOpen && (
