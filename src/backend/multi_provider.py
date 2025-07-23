@@ -35,7 +35,9 @@ class MultiProviderLLM:
             self.openai_client = OpenAI(api_key=self.openai_api_key)
         
         if self.anthropic_api_key:
-            self.anthropic_client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+            self.anthropic_client = anthropic.Anthropic(
+                api_key=self.anthropic_api_key
+            )
         
         if self.gemini_api_key:
             self.gemini_client = genai.Client(api_key=self.gemini_api_key)
@@ -251,27 +253,24 @@ class MultiProviderLLM:
         
         try:
             # Anthropic uses a different message format
-            system_message = ""
-            user_messages = []
+            system_message = None
+            formatted_messages = []
             
             for msg in messages:
                 if msg["role"] == "system":
                     system_message = msg["content"]
-                elif msg["role"] == "user":
-                    user_messages.append(msg["content"])
-                elif msg["role"] == "assistant":
-                    # For now, we'll skip assistant messages in history
-                    pass
-            
-            # Combine user messages
-            user_content = "\n\n".join(user_messages)
+                else:
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
             
             response = self.anthropic_client.messages.create(
                 model=model_id,
                 max_tokens=params.get("max_tokens", 1000),
                 temperature=params.get("temperature", 0.7),
-                system=system_message if system_message else None,
-                messages=[{"role": "user", "content": user_content}]
+                system=system_message,
+                messages=formatted_messages
             )
             
             return {

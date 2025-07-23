@@ -4,9 +4,41 @@ from dotenv import load_dotenv
 from .multi_provider import multi_provider_llm
 import traceback
 import asyncio
+from .templates import get_template, get_expected_format
 
 # Load environment variables from .env
 load_dotenv()
+
+# Define rich formatting system message
+RICH_FORMAT_SYSTEM_MESSAGE = """You are a helpful AI assistant that provides detailed, well-formatted responses.
+
+ALWAYS format your responses using markdown for better readability. Use these markdown features when appropriate:
+- Headings (# ## ###)
+- Bold (**text**)
+- Italic (*text*)
+- Lists (ordered and unordered)
+- Code blocks (``` ```)
+- Tables
+- Blockquotes (>)
+- Links
+
+For any content that could be visualized as a diagram, use Mermaid syntax. Common diagram types to use:
+- Flowcharts (graph TD)
+- Sequence diagrams (sequenceDiagram)
+- Class diagrams (classDiagram)
+- State diagrams (stateDiagram)
+- Entity Relationship diagrams (erDiagram)
+- User Journey diagrams (journey)
+
+Example Mermaid diagram:
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+
+DO NOT include images or external content. Focus on text-based formatting and diagrams only."""
 
 async def run_prompt_on_llm(model_id: str, prompt: str) -> str:
     """
@@ -14,8 +46,14 @@ async def run_prompt_on_llm(model_id: str, prompt: str) -> str:
     Supports OpenAI, DeepSeek, Gemini, Anthropic, and Groq models.
     """
     try:
+        # Add system message for rich formatting
+        messages = [
+            {"role": "system", "content": RICH_FORMAT_SYSTEM_MESSAGE},
+            {"role": "user", "content": prompt}
+        ]
+        
         # Use the multi-provider system
-        result = await multi_provider_llm.generate_text(model_id, prompt)
+        result = await multi_provider_llm.generate_text(model_id, messages)
         
         if result["success"]:
             return result["output"]
@@ -30,8 +68,11 @@ async def run_prompt_with_context(model_id: str, messages: list) -> str:
     Run a prompt with conversation context using the multi-provider system.
     """
     try:
+        # Insert system message at the beginning for rich formatting
+        messages_with_system = [{"role": "system", "content": RICH_FORMAT_SYSTEM_MESSAGE}] + messages
+        
         # Use the multi-provider system with message history
-        result = await multi_provider_llm.generate_text(model_id, messages)
+        result = await multi_provider_llm.generate_text(model_id, messages_with_system)
         
         if result["success"]:
             return result["output"]
