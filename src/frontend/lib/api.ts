@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://apanto.onrender.com';
+// Get API base URL from environment variable, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface ChatRequest {
   prompt: string;

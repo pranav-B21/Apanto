@@ -4,9 +4,54 @@ from dotenv import load_dotenv
 from .multi_provider import multi_provider_llm
 import traceback
 import asyncio
+import sys
+from .templates import get_template, get_expected_format
+
+def use_default_loop():
+    """Switch to default asyncio event loop policy"""
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+    
+def use_uvloop():
+    """Switch back to uvloop event loop policy if available"""
+    try:
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except ImportError:
+        pass  # uvloop not available, stick with default
 
 # Load environment variables from .env
 load_dotenv()
+
+# Define rich formatting system message
+RICH_FORMAT_SYSTEM_MESSAGE = """You are a helpful AI assistant that provides detailed, well-formatted responses.
+
+ALWAYS format your responses using markdown for better readability. Use these markdown features when appropriate:
+- Headings (# ## ###)
+- Bold (**text**)
+- Italic (*text*)
+- Lists (ordered and unordered)
+- Code blocks (``` ```)
+- Tables
+- Blockquotes (>)
+- Links
+
+For any content that could be visualized as a diagram, use Mermaid syntax. Common diagram types to use:
+- Flowcharts (graph TD)
+- Sequence diagrams (sequenceDiagram)
+- Class diagrams (classDiagram)
+- State diagrams (stateDiagram)
+- Entity Relationship diagrams (erDiagram)
+- User Journey diagrams (journey)
+
+Example Mermaid diagram:
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+
+DO NOT include images or external content. Focus on text-based formatting and diagrams only."""
 
 async def run_prompt_on_llm(model_id: str, prompt: str) -> str:
     """
@@ -14,8 +59,14 @@ async def run_prompt_on_llm(model_id: str, prompt: str) -> str:
     Supports OpenAI, DeepSeek, Gemini, Anthropic, and Groq models.
     """
     try:
+        # Add system message for rich formatting
+        messages = [
+            {"role": "system", "content": RICH_FORMAT_SYSTEM_MESSAGE},
+            {"role": "user", "content": prompt}
+        ]
+        
         # Use the multi-provider system
-        result = await multi_provider_llm.generate_text(model_id, prompt)
+        result = await multi_provider_llm.generate_text(model_id, messages)
         
         if result["success"]:
             return result["output"]
@@ -30,8 +81,11 @@ async def run_prompt_with_context(model_id: str, messages: list) -> str:
     Run a prompt with conversation context using the multi-provider system.
     """
     try:
+        # Insert system message at the beginning for rich formatting
+        messages_with_system = [{"role": "system", "content": RICH_FORMAT_SYSTEM_MESSAGE}] + messages
+        
         # Use the multi-provider system with message history
-        result = await multi_provider_llm.generate_text(model_id, messages)
+        result = await multi_provider_llm.generate_text(model_id, messages_with_system)
         
         if result["success"]:
             return result["output"]
@@ -62,18 +116,36 @@ async def test_model(model):
     """Test if a model can generate a response"""
     model_id = model["model_id"]
     prompt = f"Say hello from {model_id}!"
+    
     try:
-        result = await multi_provider_llm.generate_text(
-            model_id=model_id,
-            messages=prompt,
-            parameters={"temperature": 0.2, "max_tokens": 16}
+        # Create messages in the correct format
+        messages = [{"role": "user", "content": prompt}]
+        
+        # Use asyncio.shield to prevent cancellation during testing
+        result = await asyncio.shield(
+            multi_provider_llm.generate_text(
+                model_id=model_id,
+                messages=messages,
+                parameters={"temperature": 0.2, "max_tokens": 16}
+            )
         )
-        assert result.get("success"), f"Model {model_id} failed: {result.get('error')}"
-        assert result.get("output"), f"Model {model_id} returned empty output"
-        print(f"Model {model_id} passed inference test.")
+        
+        if not result.get("success"):
+            print(f"Model {model_id} test failed: {result.get('error', 'Unknown error')}")
+            return False
+            
+        if not result.get("output"):
+            print(f"Model {model_id} test failed: No output generated")
+            return False
+            
+        print(f"Model {model_id} test passed")
         return True
+        
+    except asyncio.TimeoutError:
+        print(f"Model {model_id} test failed: Timeout")
+        return False
     except Exception as e:
-        print(f"Model {model_id} failed inference test: {e}")
+        print(f"Model {model_id} test failed: {str(e)}")
         return False
 
 async def filter_models_by_inference_test(models):
@@ -82,36 +154,18 @@ async def filter_models_by_inference_test(models):
     results = await asyncio.gather(*tasks)
     return [m for m, passed in zip(models, results) if passed]
 
-def run_inference_tests_sync(models):
-    """Run inference tests synchronously (for use in non-async contexts)"""
-    try:
-        # Try to run in a new event loop
-        filtered_models = asyncio.run(filter_models_by_inference_test(models))
-        print(f"{len(filtered_models)}/{len(models)} models passed inference test.")
-        return filtered_models
-    except RuntimeError:
-        # If already in an event loop (e.g. in FastAPI), try a different approach
-        try:
-            import nest_asyncio
-            nest_asyncio.apply()
-            
-            # Get the current event loop or create a new one
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # Run the async function
-            filtered_models = loop.run_until_complete(filter_models_by_inference_test(models))
-            print(f"{len(filtered_models)}/{len(models)} models passed inference test.")
-            return filtered_models
-            
-        except Exception as e:
-            print(f"Error running inference tests: {e}")
-            print("Falling back to return all models without testing")
-            return models
-
 async def run_inference_tests_async(models):
-    """Run inference tests asynchronously (for use in async contexts like FastAPI endpoints)"""
-    return await filter_models_by_inference_test(models)
+    """Run inference tests asynchronously"""
+    if not models:
+        return []
+        
+    filtered_models = []
+    for model in models:
+        try:
+            result = await test_model(model)
+            if result:
+                filtered_models.append(model)
+        except Exception as e:
+            print(f"Failed to test model {model['model_id']}: {str(e)}")
+            continue
+    return filtered_models

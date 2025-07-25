@@ -4,7 +4,9 @@ import requests
 import random
 from dotenv import load_dotenv
 from .database import load_models_from_database
-from .infer import run_inference_tests_sync
+from .infer import run_inference_tests_async, test_model
+import asyncio
+import traceback
 # Load environment variables from .env
 load_dotenv()
 
@@ -24,38 +26,96 @@ def get_live_groq_model_ids():
         print("Failed to fetch model list from Groq:", e)
         return set()
 
-def load_models():
+async def load_models():
     """
     Load models from Supabase database, then filter out any decommissioned models
     by checking against Groq's live model list. Only return models that pass a basic inference test, except local HuggingFace models which are always included.
     """
-    # Load models from database instead of models.json
-    all_models = load_models_from_database()
-    
-    if not all_models:
-        print("No models loaded from database!")
+    try:
+        # Load models from database instead of models.json
+        all_models = load_models_from_database()
+        
+        if not all_models:
+            print("No models loaded from database!")
+            return []
+
+        print(f"\n📋 Loaded {len(all_models)} models from database:")
+        for model in all_models:
+            print(f"  - {model['name']} ({model['model_id']}) - HF: {model.get('is_huggingface', False)}")
+
+        live_model_ids = get_live_groq_model_ids()
+        
+        if live_model_ids is None:
+            # If Groq API is not available, return all models from database
+            print(f"⚠️ Groq API not available, returning all models from database")
+            return all_models
+
+        print(f"✅ Groq API available, proceeding with model filtering")
+
+        # Separate local (HuggingFace) and non-local models
+        local_models = [m for m in all_models if m.get('is_huggingface')]
+        remote_models = [m for m in all_models if not m.get('is_huggingface')]
+
+        print(f"\n🔍 Model Separation:")
+        print(f"  📦 Local (HuggingFace) models: {len(local_models)}")
+        print(f"  🌐 Remote models: {len(remote_models)}")
+        
+        if remote_models:
+            print(f"  🌐 Remote models to test: {[m['model_id'] for m in remote_models]}")
+
+        # Filter only remote models by inference test
+        print(f"\n🧪 Testing {len(remote_models)} remote models...")
+        
+        # Test models concurrently
+        filtered_remote_models = []
+        for model in remote_models:
+            try:
+                result = await test_model(model)
+                if result:
+                    filtered_remote_models.append(model)
+            except Exception as e:
+                print(f"Failed to test model {model['model_id']}: {str(e)}")
+                continue
+
+        # Always include local models
+        filtered_models = filtered_remote_models + local_models
+        
+        # Calculate working vs non-working models
+        working_remote = len(filtered_remote_models)
+        failed_remote = len(remote_models) - working_remote
+        working_local = len(local_models)
+        
+        print(f"\nModel Testing Results:")
+        print(f"Working remote models: {working_remote}")
+        print(f"Failed remote models: {failed_remote}")
+        print(f"Local models (always included): {working_local}")
+        print(f"Total available models: {len(filtered_models)}")
+        
+        return filtered_models
+        
+    except Exception as e:
+        print(f"Error loading models: {e}")
+        traceback.print_exc()
         return []
 
-    live_model_ids = get_live_groq_model_ids()
-    
-    if live_model_ids is None:
-        # If Groq API is not available, return all models from database
-        print(f"Loaded {len(all_models)} models from database (no Groq filtering)")
-        return all_models
-
-    print(f"Loaded {len(all_models)} active models from database")
-
-    # Separate local (HuggingFace) and non-local models
-    local_models = [m for m in all_models if m.get('is_huggingface')]
-    remote_models = [m for m in all_models if not m.get('is_huggingface')]
-
-    # Filter only remote models by inference test
-    filtered_remote_models = run_inference_tests_sync(remote_models)
-
-    # Always include local models
-    filtered_models = filtered_remote_models + local_models
-    print(f"Returning {len(filtered_models)} models: {len(filtered_remote_models)} remote (tested), {len(local_models)} local (untested)")
-    return filtered_models
+def load_models_sync():
+    """Synchronous wrapper for load_models"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If we're in a running loop, create a task
+            return asyncio.create_task(load_models())
+        else:
+            # If loop exists but not running, use it directly
+            return loop.run_until_complete(load_models())
+    except RuntimeError:
+        # No event loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(load_models())
+        finally:
+            loop.close()
 
 def score_model(model: dict, category: str, priority: str) -> float:
     """

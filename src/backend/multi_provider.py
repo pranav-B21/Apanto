@@ -35,7 +35,9 @@ class MultiProviderLLM:
             self.openai_client = OpenAI(api_key=self.openai_api_key)
         
         if self.anthropic_api_key:
-            self.anthropic_client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+            self.anthropic_client = anthropic.Anthropic(
+                api_key=self.anthropic_api_key
+            )
         
         if self.gemini_api_key:
             self.gemini_client = genai.Client(api_key=self.gemini_api_key)
@@ -95,7 +97,7 @@ class MultiProviderLLM:
     ) -> Dict[str, Any]:
         """Generate text using the appropriate provider"""
 
-        print("is it even entering this function?")
+
         
         # Handle string input (legacy support)
         if isinstance(messages, str):
@@ -119,7 +121,6 @@ class MultiProviderLLM:
             elif provider == "deepseek":
                 return await self.call_deepseek(model_id, formatted_messages, default_params)
             elif provider == "gemini":
-                print("calling gemini")
                 return await self.call_gemini(model_id, formatted_messages, default_params)
                 
             elif provider == "anthropic":
@@ -136,6 +137,65 @@ class MultiProviderLLM:
                 "provider": provider,
                 "model_id": model_id
             }
+    
+    def generate_text_sync(self, model_id: str, messages: Union[str, List[Dict[str, str]]], parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Synchronous version of generate_text for use in non-async contexts.
+        """
+        try:
+            # Get the provider for this model
+            provider = self.get_provider_from_model_id(model_id)
+            if not provider:
+                return {"success": False, "error": f"No provider found for model {model_id}"}
+
+            # Format messages if needed
+            if isinstance(messages, str):
+                messages = [{"role": "user", "content": messages}]
+
+            # Get provider-specific client
+            client = self.get_provider_client(provider)
+            if not client:
+                return {"success": False, "error": f"No client available for provider {provider}"}
+
+            # Use provider-specific sync generation method
+            if provider == "anthropic":
+                response = client.messages.create(
+                    model=model_id,
+                    messages=messages,
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.content[0].text}
+                
+            elif provider == "openai":
+                response = client.chat.completions.create(
+                    model=model_id,
+                    messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.choices[0].message.content}
+                
+            elif provider == "gemini":
+                # Convert chat format to text for Gemini
+                prompt = "\n".join([m["content"] for m in messages])
+                response = client.generate_content(prompt)
+                return {"success": True, "output": response.text}
+                
+            elif provider == "groq":
+                response = client.chat.completions.create(
+                    model=model_id,
+                    messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.choices[0].message.content}
+                
+            else:
+                return {"success": False, "error": f"Unsupported provider {provider} for sync generation"}
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
     
     async def call_openai(self, model_id: str, messages: List[Dict[str, str]], params: Dict[str, Any]) -> Dict[str, Any]:
         """Call OpenAI API"""
@@ -216,7 +276,6 @@ class MultiProviderLLM:
             }
     
     async def call_gemini(self, model_id: str, messages: List[Dict[str, str]], params: Dict[str, Any]) -> Dict[str, Any]:
-        print("model id:", model_id)
         if not self.gemini_client:
             raise ValueError("Gemini API key not configured")
         try:
@@ -239,7 +298,6 @@ class MultiProviderLLM:
                 "usage": {}  # Gemini doesn't provide detailed usage
             }
         except Exception as e:
-            print(f"Exception in call_gemini: {e}")
             return {
                 "success": False,
                 "error": f"Gemini API error: {str(e)}",
@@ -254,27 +312,24 @@ class MultiProviderLLM:
         
         try:
             # Anthropic uses a different message format
-            system_message = ""
-            user_messages = []
+            system_message = None
+            formatted_messages = []
             
             for msg in messages:
                 if msg["role"] == "system":
                     system_message = msg["content"]
-                elif msg["role"] == "user":
-                    user_messages.append(msg["content"])
-                elif msg["role"] == "assistant":
-                    # For now, we'll skip assistant messages in history
-                    pass
-            
-            # Combine user messages
-            user_content = "\n\n".join(user_messages)
+                else:
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
             
             response = self.anthropic_client.messages.create(
                 model=model_id,
                 max_tokens=params.get("max_tokens", 1000),
                 temperature=params.get("temperature", 0.7),
-                system=system_message if system_message else None,
-                messages=[{"role": "user", "content": user_content}]
+                system=system_message,
+                messages=formatted_messages
             )
             
             return {
