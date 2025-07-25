@@ -138,6 +138,65 @@ class MultiProviderLLM:
                 "model_id": model_id
             }
     
+    def generate_text_sync(self, model_id: str, messages: Union[str, List[Dict[str, str]]], parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Synchronous version of generate_text for use in non-async contexts.
+        """
+        try:
+            # Get the provider for this model
+            provider = self.get_provider_from_model_id(model_id)
+            if not provider:
+                return {"success": False, "error": f"No provider found for model {model_id}"}
+
+            # Format messages if needed
+            if isinstance(messages, str):
+                messages = [{"role": "user", "content": messages}]
+
+            # Get provider-specific client
+            client = self.get_provider_client(provider)
+            if not client:
+                return {"success": False, "error": f"No client available for provider {provider}"}
+
+            # Use provider-specific sync generation method
+            if provider == "anthropic":
+                response = client.messages.create(
+                    model=model_id,
+                    messages=messages,
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.content[0].text}
+                
+            elif provider == "openai":
+                response = client.chat.completions.create(
+                    model=model_id,
+                    messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.choices[0].message.content}
+                
+            elif provider == "gemini":
+                # Convert chat format to text for Gemini
+                prompt = "\n".join([m["content"] for m in messages])
+                response = client.generate_content(prompt)
+                return {"success": True, "output": response.text}
+                
+            elif provider == "groq":
+                response = client.chat.completions.create(
+                    model=model_id,
+                    messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+                    max_tokens=parameters.get("max_tokens", 1000) if parameters else 1000,
+                    temperature=parameters.get("temperature", 0.7) if parameters else 0.7
+                )
+                return {"success": True, "output": response.choices[0].message.content}
+                
+            else:
+                return {"success": False, "error": f"Unsupported provider {provider} for sync generation"}
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
     async def call_openai(self, model_id: str, messages: List[Dict[str, str]], params: Dict[str, Any]) -> Dict[str, Any]:
         """Call OpenAI API"""
         if not self.openai_client:

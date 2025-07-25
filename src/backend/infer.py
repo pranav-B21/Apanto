@@ -4,7 +4,20 @@ from dotenv import load_dotenv
 from .multi_provider import multi_provider_llm
 import traceback
 import asyncio
+import sys
 from .templates import get_template, get_expected_format
+
+def use_default_loop():
+    """Switch to default asyncio event loop policy"""
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+    
+def use_uvloop():
+    """Switch back to uvloop event loop policy if available"""
+    try:
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except ImportError:
+        pass  # uvloop not available, stick with default
 
 # Load environment variables from .env
 load_dotenv()
@@ -103,18 +116,36 @@ async def test_model(model):
     """Test if a model can generate a response"""
     model_id = model["model_id"]
     prompt = f"Say hello from {model_id}!"
+    
     try:
-        result = await multi_provider_llm.generate_text(
-            model_id=model_id,
-            messages=prompt,
-            parameters={"temperature": 0.2, "max_tokens": 16}
+        # Create messages in the correct format
+        messages = [{"role": "user", "content": prompt}]
+        
+        # Use asyncio.shield to prevent cancellation during testing
+        result = await asyncio.shield(
+            multi_provider_llm.generate_text(
+                model_id=model_id,
+                messages=messages,
+                parameters={"temperature": 0.2, "max_tokens": 16}
+            )
         )
+        
         if not result.get("success"):
+            print(f"Model {model_id} test failed: {result.get('error', 'Unknown error')}")
             return False
+            
         if not result.get("output"):
+            print(f"Model {model_id} test failed: No output generated")
             return False
+            
+        print(f"Model {model_id} test passed")
         return True
+        
+    except asyncio.TimeoutError:
+        print(f"Model {model_id} test failed: Timeout")
+        return False
     except Exception as e:
+        print(f"Model {model_id} test failed: {str(e)}")
         return False
 
 async def filter_models_by_inference_test(models):
@@ -123,36 +154,18 @@ async def filter_models_by_inference_test(models):
     results = await asyncio.gather(*tasks)
     return [m for m, passed in zip(models, results) if passed]
 
-def run_inference_tests_sync(models):
-    """Run inference tests synchronously (for use in non-async contexts)"""
+async def run_inference_tests_async(models):
+    """Run inference tests asynchronously"""
     if not models:
         return []
-    
-    try:
-        # Try to run in a new event loop
-        filtered_models = asyncio.run(filter_models_by_inference_test(models))
-        return filtered_models
-    except RuntimeError:
-        # If already in an event loop (e.g. in FastAPI), try a different approach
+        
+    filtered_models = []
+    for model in models:
         try:
-            import nest_asyncio
-            nest_asyncio.apply()
-            
-            # Get the current event loop or create a new one
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # Run the async function
-            filtered_models = loop.run_until_complete(filter_models_by_inference_test(models))
-            return filtered_models
-            
+            result = await test_model(model)
+            if result:
+                filtered_models.append(model)
         except Exception as e:
-            print(f"❌ Error running inference tests: {e}")
-            return models
-
-async def run_inference_tests_async(models):
-    """Run inference tests asynchronously (for use in async contexts like FastAPI endpoints)"""
-    return await filter_models_by_inference_test(models)
+            print(f"Failed to test model {model['model_id']}: {str(e)}")
+            continue
+    return filtered_models

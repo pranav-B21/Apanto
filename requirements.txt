@@ -18,3 +18,4 @@ requests>=2.31.0
 react-katex 
 katex
 prismjs
+nest-asyncio==1.6.0

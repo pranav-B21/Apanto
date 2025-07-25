@@ -26,6 +26,18 @@ load_dotenv()
 
 app = FastAPI(title="AI Smart Prompt Stream Backend", version="1.0.0")
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize async resources on startup"""
+    try:
+        # Load initial models asynchronously
+        loop = asyncio.get_event_loop()
+        if not loop.is_running():
+            await loop.create_task(load_models())
+    except Exception as e:
+        print(f"Error during startup: {e}")
+        traceback.print_exc()
+
 # Initialize HuggingFaceHostingService
 hf_service = HuggingFaceHostingService(db_manager)
 
@@ -140,8 +152,9 @@ class ImprovePromptResponse(BaseModel):
     priority: Optional[str] = None
     estimated_impact: Optional[str] = None
 
-# Global variables to cache models
+# Global variables to cache models and their test results
 cached_models = None
+cached_tested_models = None
 models_loading = False
 
 # --- LLM Memory Store ---
@@ -173,18 +186,19 @@ class SessionMemory:
 # Instantiate global memory store
 session_memory = SessionMemory(max_turns=8)
 
-def get_models():
+async def get_models():
     """Get cached models or load them if not cached"""
-    global cached_models, models_loading
-    if cached_models is None:
+    global cached_models, cached_tested_models, models_loading
+    if cached_tested_models is None:
         models_loading = True
         try:
-            print("🔄 Loading models...")
-            cached_models = load_models()
-            print("✅ Models loaded successfully")
+            print("🔄 Loading and testing models...")
+            models = await load_models()  # This now returns tested models
+            cached_tested_models = models
+            print("✅ Models loaded and tested successfully")
         finally:
             models_loading = False
-    return cached_models
+    return cached_tested_models
 
 @app.get("/")
 async def root():
@@ -212,40 +226,23 @@ async def get_models_loading_status():
 
 @app.post("/models/reload")
 async def reload_models():
-    """Force reload of models (clears cache and reloads)"""
-    global cached_models, models_loading
-    cached_models = None
-    models_loading = True
+    """Force reload of available models"""
+    global cached_tested_models
     try:
-        print("🔄 Forcing model reload...")
-        cached_models = load_models()
-        print("✅ Models reloaded successfully")
-        return {"success": True, "message": "Models reloaded successfully"}
+        cached_tested_models = None  # Clear cache to force reload
+        models = await get_models()  # This will trigger a fresh load and test
+        return {"success": True, "models": models}
     except Exception as e:
-        print(f"❌ Error reloading models: {e}")
-        return {"success": False, "error": str(e)}
-    finally:
-        models_loading = False
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/models")
 async def get_available_models():
-    """Get all available models from the database"""
+    """Get list of available models with their capabilities"""
     try:
-        models = get_models()
-        return {
-            "models": [
-                {
-                    "name": model["name"],
-                    "model_id": model["model_id"],
-                    "scores": model.get("scores", {}),
-                    "provider": multi_provider_llm.get_provider_from_model_id(model["model_id"]) if not model.get("is_huggingface") else "huggingface"
-                }
-                for model in models
-            ],
-            "count": len(models)
-        }
+        models = await get_models()  # Use cached models
+        return {"models": models}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load models: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/providers")
 async def get_providers():
@@ -293,7 +290,7 @@ async def chat_endpoint(request: ChatRequest):
         task_type = classify_prompt(request.prompt)
         
         # 2. Get available models
-        models = get_models()
+        models = await get_models()  # Now using async get_models
         if not models:
             raise HTTPException(status_code=500, detail="No models available")
         
@@ -471,7 +468,7 @@ async def enhance_prompt(request: dict):
 async def get_model_analytics():
     """Get analytics about model performance and usage"""
     try:
-        models = get_models()
+        models = await get_models() # Changed to async load_models
         
         # Generate mock analytics for now - you can enhance this with real usage data
         analytics = {
